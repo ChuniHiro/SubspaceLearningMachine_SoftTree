@@ -17,7 +17,7 @@ def get_dataloaders(
         'num_workers': num_workers, 'pin_memory': True,
     } if cuda else {}
 
-    if dataset == 'mnist' or dataset == 'fashion_mnist':
+    if dataset == 'mnist' :
         if augmentation_on:
             transform_train = transforms.Compose(
                 [
@@ -77,6 +77,54 @@ def get_dataloaders(
             batch_size=1000,
             shuffle=False,
             **kwargs)
+        
+    elif dataset == 'fashion_mnist':
+
+        transform_train = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,)),
+            ],
+        )
+        transform_test = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,)),
+            ],
+        )
+
+        mnist_train = datasets.FashionMNIST(
+            '../data', train=True, download=True, transform=transform_train,
+        )
+        mnist_valid = datasets.FashionMNIST(
+            '../data', train=True, download=True, transform=transform_test,
+        )
+        mnist_test = datasets.FashionMNIST(
+            '../data', train=False, transform=transform_test,
+        )
+
+        TOTAL_NUM = 60000
+        NUM_VALID = int(round(TOTAL_NUM * 0.1))
+        NUM_TRAIN = int(round(TOTAL_NUM - NUM_VALID))
+
+        train_loader = torch.utils.data.DataLoader(
+            mnist_train,
+            batch_size=batch_size,
+            sampler=ChunkSampler(NUM_TRAIN, 0, shuffle=True),
+            **kwargs)
+
+        valid_loader = torch.utils.data.DataLoader(
+            mnist_valid,
+            batch_size=batch_size,
+            sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
+            **kwargs)
+
+        test_loader = torch.utils.data.DataLoader(
+            mnist_test,
+            batch_size=1000,
+            shuffle=False,
+            **kwargs)
+
 
     elif dataset == 'cifar10':
         if augmentation_on:
@@ -301,6 +349,11 @@ def get_dataset_details(dataset):
     if dataset == 'mnist' or  dataset == 'fashion_mnist':
         input_nc, input_width, input_height = 1, 28, 28
         classes = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+
+    elif dataset == 'fashion_mnist':
+        input_nc, input_width, input_height = 1, 28, 28
+        classes = ("T-shirt/top", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot")
+
     elif dataset == 'cifar10':
         input_nc, input_width, input_height = 3, 32, 32
         classes = (
