@@ -1143,7 +1143,7 @@ class InnerGAPwithMBv2Conv_TwoFClayers(nn.Module):
                 expansion_rate = 2, 
                 reduction_rate = 2,
                 **kwargs):
-        super(RouterGAPwithMBv2Conv_TwoFClayers, self).__init__()
+        super(InnerGAPwithMBv2Conv_TwoFClayers, self).__init__()
         block = InvertedResidual
         input_channel = input_nc
         self.ngf = ngf

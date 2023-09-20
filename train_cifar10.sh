@@ -52,7 +52,7 @@
 #                --transformer_expansion_rate 2
 
 python train.py --experiment cifar10     \
-               --subexperiment inverse_residual_test \
+               --subexperiment inverse_residual_run0 \
                --dataset cifar10   \
                --lr 0.001 \
                --router_ver 8      \
@@ -63,16 +63,15 @@ python train.py --experiment cifar10     \
                --transformer_k 3     \
                --solver_ver 7       \
                --batch_norm         \
-               --maxdepth 2       \
+               --maxdepth 5       \
                --batch-size 1024   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
-               --epochs_patience 1 \
-               --epochs_node 1   \
-               --epochs_finetune 2 \
+               --epochs_patience 50 \
+               --epochs_node 100   \
+               --epochs_finetune 200 \
                --seed 0    \
                --num_workers 0 \
                --visualize_split \
                --finetune_during_growth \
-               --criteria always \
                --transformer_expansion_rate 2
