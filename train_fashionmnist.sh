@@ -68,19 +68,34 @@
 #                --seed 1
 # 90.58
 
-python tree.py --experiment fashion_mnist     \
-               --subexperiment batch1024_maxdepth10_seed1_t_256_r_512\
-               --dataset fashion_mnist   \
-               --lr 0.001 \
+# python tree.py --experiment fashion_mnist     \
+#                --subexperiment batch1024_maxdepth10_seed1_t_256_r_512\
+#                --dataset fashion_mnist   \
+#                --lr 0.001 \
+#                --batch-size 512  \
+#                --epochs_patience 5 \
+#                --epochs_node 100\
+# 	           --epochs_finetune 200\
+#                -t_ver 3 -t_ngf 256 -t_k 3\
+#                -r_ver 6 -r_ngf 512 -r_k 3 \
+#                -s_ver 4 \
+#                -ds_int 1 \
+#                --maxdepth 10 \
+#                --visualise_split \
+#                --num_workers 0\
+#                --seed 1
+
+python train.py --dataset fashion_mnist\
+               --experiment batch512_depth5 \
+               --subexperiment  run0 \
                --batch-size 512  \
-               --epochs_patience 5 \
-               --epochs_node 100\
-	           --epochs_finetune 200\
-               -t_ver 3 -t_ngf 256 -t_k 3\
-               -r_ver 6 -r_ngf 512 -r_k 3 \
+               --epochs_patience 5\
+               --epochs_node 50\
+	           --epochs_finetune 100\
+               -t_ver 3 -t_ngf 128 -t_k 3\
+               -r_ver 6 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
-               --maxdepth 10 \
-               --visualise_split \
-               --num_workers 0\
-               --seed 1
+               --maxdepth 5 \
+               --visualize_split --num_workers 0\
+               --seed 0

@@ -321,7 +321,7 @@ def print_performance(jasonfile, model_name='model_1', figsize=(5,5)) :
     plt.xlabel('epoch number')
 
 
-def plot_performance(jasonfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5,5), title='', finetune_position=False) :
+def plot_performance(recordfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5,5), title='', finetune_position=False) :
     """ Plot train/test loss for multiple models.
     """
     # TODO: currently only supports up to 8 models at a time due to color types
@@ -329,9 +329,9 @@ def plot_performance(jasonfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5,
     color = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
 
     if not(model_names):
-        model_names = [str(i) for i in range(len(jasonfiles))]
+        model_names = [str(i) for i in range(len(recordfiles))]
 
-    for i, f in enumerate(jasonfiles):
+    for i, f in enumerate(recordfiles):
         # load the information: 
         # records = json.load(open(f, 'r'))
         records = pickle.load(open(f, 'rb'))
@@ -341,11 +341,13 @@ def plot_performance(jasonfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5,
         valid_epoch_loss = records['valid_epoch_loss']
         train_epoch_loss = [tmp.cpu().numpy() for tmp in train_epoch_loss]
         valid_epoch_loss = [tmp.cpu().numpy() for tmp in valid_epoch_loss]
+        # print("check train valid loss: ", len(train_epoch_loss), len(valid_epoch_loss))
+        # print(train_epoch_loss)
         plt.plot(np.arange(len(valid_epoch_loss)), valid_epoch_loss,
                  color=color[i], linestyle='-.', label='valid epoch loss: ' + model_names[i])
-        plt.plot(np.arange(len(train_epoch_loss), dtype=float), train_epoch_loss, 
+        plt.plot(np.arange(len(train_epoch_loss)), train_epoch_loss, 
                  color=color[i], linestyle='-', label='train epoch loss: '  + model_names[i])
-
+        
         if finetune_position:
             plt.axvline(
                 x=len(records['valid_epoch_loss']) - records['epochs_finetune'],
@@ -357,10 +359,11 @@ def plot_performance(jasonfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5,
     plt.xlabel('Epoch', fontsize=15)
     plt.legend(loc='upper right', fontsize=13)
     plt.title(title)
+    plt.show()
 
 
 def plot_accuracy(
-        jasonfiles, model_names=[],
+        recordfiles, model_names=[],
         figsize=(5,5), ymin=0.0, ymax=100.0, title='',
         finetune_position=False, color=None):
     """Plot test accuracy (%) for multiple models on the same axis. """
@@ -369,9 +372,9 @@ def plot_accuracy(
         color = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
 
     if not(model_names):
-        model_names = [str(i) for i in range(len(jasonfiles))]
+        model_names = [str(i) for i in range(len(recordfiles))]
 
-    for i, f in enumerate(jasonfiles):
+    for i, f in enumerate(recordfiles):
         # load the information: 
         # records = json.load(open(f, 'r'))
         records = pickle.load(open(f, 'rb'))
@@ -393,7 +396,7 @@ def plot_accuracy(
             plt.axvline(x=len(records['valid_epoch_loss'])-records['epochs_finetune'], color=color[i], linestyle='--')
     plt.legend(loc='lower right', fontsize=13)
     plt.title(title)
-
+    plt.show()
 
 def compute_accuracy(jasonfiles, model_names=[], name =''):
     if not(model_names):
@@ -490,3 +493,4 @@ def visualize_treestructures(fig_dir, figsize=(5,5), fig_name=''):
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
+    plt.show()

@@ -28,8 +28,8 @@ python train.py --dataset mnist \
                --epochs_patience 2\
                --epochs_node 50\
 	           --epochs_finetune 100\
-               -t_ver 3 -t_ngf 128 -t_k 3\
-               -r_ver 6 -r_ngf 256 -r_k 3 \
+               -t_ver 3 -t_ngf 64 -t_k 3\
+               -r_ver 6 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
                --maxdepth 5 \

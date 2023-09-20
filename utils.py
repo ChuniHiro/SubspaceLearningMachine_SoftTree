@@ -49,6 +49,7 @@ def define_node(
     # get input shape before transformation
     if not tree_struct: # if it's first node, then set it to the input data size
         meta['in_shape'] = (1, args.input_nc, args.input_width, args.input_height)
+
     else:
         meta['in_shape'] = tree_struct[parent_index]['out_shape']
 
@@ -70,15 +71,29 @@ def define_node(
     else:
         meta['downsampled'] = False
 
+    # print("args.transformer_ngf", args.transformer_ngf)
     # get the transformer version: 
-    config_t = {'kernel_size': args.transformer_k,
-                'ngf': args.transformer_ngf,
+    if not tree_struct: 
+        # if it's first node, then set it to a standard convolutional layer
+        config_t = {'kernel_size': 3,
+                'ngf': args.transformer_ngf[level],
                 'batch_norm': args.batch_norm,
                 'downsample': meta['downsampled'],
-                'expansion_rate': args.transformer_expansion_rate,
-                'reduction_rate': args.transformer_reduction_rate
+                'expansion_rate': 1,
+                'reduction_rate': 2
                 }
-    transformer_ver = args.transformer_ver
+        transformer_ver = 3
+
+    else:
+        config_t = {'kernel_size': args.transformer_k,
+                    'ngf': args.transformer_ngf[level],
+                    'batch_norm': args.batch_norm,
+                    'downsample': meta['downsampled'],
+                    'expansion_rate': args.transformer_expansion_rate,
+                    'reduction_rate': args.transformer_reduction_rate
+                    }
+        transformer_ver = args.transformer_ver
+
     if identity:
         transformer = models.Identity(meta['in_shape'][1], meta['in_shape'][2], meta['in_shape'][3],
                                       **config_t)
@@ -134,11 +149,14 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         return models.ResidualTransformer(input_nc, input_width, input_height, **kwargs)
     elif version == 5:  # VGG13: 2 conv layer + 1 max pooling
         return models.VGG13ConvPool(input_nc, input_width, input_height, **kwargs)
+    elif version == 6:  # Inverted resudial
+        return models.Edge_MBV2(input_nc, input_width, input_height, **kwargs)
     else:
         raise NotImplementedError("Specified transformer module not available.")
 
 
 def define_router(version, input_nc, input_width, input_height, **kwargs):
+    
     if version == 1:  # Simple router with 1 conv kernel + spatial averaging
         return models.Router(input_nc, input_width, input_height, **kwargs)
     elif version == 2:  # 1 conv layer with global average pooling + fc layer
@@ -153,6 +171,8 @@ def define_router(version, input_nc, input_width, input_height, **kwargs):
         return models.RouterGAPwithConv_TwoFClayers(input_nc, input_width, input_height, **kwargs)
     elif version == 7:  # MLP with 2 hidden layer
         return models.Router_MLP_h2(input_nc, input_width, input_height, **kwargs)
+    elif version == 8:  # 1 reverse residual conv + GAP + 2 fc layers
+        return models.InnerGAPwithMBv2Conv_TwoFClayers(input_nc, input_width, input_height, **kwargs)
     else:
         raise NotImplementedError("Specified router module not available!")
 
@@ -170,6 +190,8 @@ def define_solver(version, input_nc, input_width, input_height, **kwargs):
         return models.MLP_AlexNet(input_nc, input_width, input_height, **kwargs)
     elif version == 6:  # GAP + 1 FC layer
         return models.Solver_GAP_OneFClayers(input_nc, input_width, input_height, **kwargs)
+    elif version == 7:
+        return models.Child_MBV2(input_nc, input_width, input_height, **kwargs)
     else:
         raise NotImplementedError("Specified solver module not available!")
 

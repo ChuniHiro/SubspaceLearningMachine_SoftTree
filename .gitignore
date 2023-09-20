@@ -1,1 +1,3 @@
 *.pyc
+/experiments/*
+__pycache__/*

@@ -62,7 +62,7 @@ parser.add_argument('--router_dropout_prob', '-r_drop', dest='router_dropout_pro
 parser.add_argument('--transformer_ver', '-t_ver', dest='transformer_ver', type=int, default=1, help='default transformer version: identity')
 parser.add_argument('--transformer_ngf', '-t_ngf', dest='transformer_ngf', type=int, default=3, help='number of feature maps in residual transformer')
 parser.add_argument('--transformer_k', '-t_k', dest='transformer_k', type=int, default=5, help='kernel size in transfomer function')
-parser.add_argument('--transformer_expansion_rate', '-t_expr', dest='transformer_expansion_rate', type=int, default=1, help='default transformer expansion rate')
+parser.add_argument('--transformer_expansion_rate', '-t_expr', dest='transformer_expansion_rate', type=int, default=3, help='default transformer expansion rate')
 parser.add_argument('--transformer_reduction_rate', '-t_redr', dest='transformer_reduction_rate', type=int, default=2, help='default transformer reduction rate')
 
 parser.add_argument('--solver_ver', '-s_ver', dest='solver_ver', type=int, default=1, help='default router version')
@@ -76,7 +76,7 @@ parser.add_argument('--batch_norm', '-bn', dest='batch_norm', action='store_true
 parser.add_argument('--visualize_split', action='store_true', help='visuliase how the test dist is split by the routing function')
 
 args = parser.parse_args()
-
+args.transformer_ngf = [32, 64, 96, 160, 320, 512, 512, 512, 512, 512, 512, 512, 512, 512, 512]
 # GPUs devices:
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 if args.gpu:
@@ -131,6 +131,7 @@ def train(model, data_loader, optimizer, node_idx):
 
     # train the model
     for batch_idx, (x, y) in enumerate(data_loader):
+        
         optimizer.zero_grad()
         if args.cuda:
             x, y = x.cuda(), y.cuda()
@@ -497,9 +498,14 @@ def grow_tree_nodewise():
     # define the root node:
     tree_struct = []  # stores graph information for each node
     tree_modules = []  # stores modules for each node
+    print("\nDefine the root node")
     root_meta, root_module = define_node(
         args, node_index=0, level=0, parent_index=-1, tree_struct=tree_struct,
     )
+    print("\nRoot node meta information:")
+    print(root_meta)
+    print("\nRoot node module information:")
+    print(root_module)
     tree_struct.append(root_meta)
     tree_modules.append(root_module)
 
@@ -510,7 +516,7 @@ def grow_tree_nodewise():
     if args.cuda:
         model.cuda()
 
-    # optimise
+    # optimize
     model, tree_modules = optimize_fixed_tree(
         model, tree_struct,
         train_loader, valid_loader, test_loader, args.epochs_node, node_idx=0,
@@ -526,26 +532,36 @@ def grow_tree_nodewise():
         for node_idx in range(len(tree_struct)):
             change = False
             if tree_struct[node_idx]['is_leaf'] and not(tree_struct[node_idx]['visited']):
-
-                print("\nProcessing node " + str(node_idx))
+                
+                print("\nProcessing node " + str(node_idx) + " At layer " + str(lyr))
 
                 # -------------- Define children candidate nodes --------------
                 # ---------------------- (1) Split ----------------------------
                 # left child
                 identity = True
+                print("\ndefine left child")
                 meta_l, node_l = define_node(
                     args,
                     node_index=nextind, level=lyr+1,
                     parent_index=node_idx, tree_struct=tree_struct,
                     identity=identity,
                 )
+                print("\nLeft child meta information:")
+                print(meta_l)
+                print("\nLeft child module information:")
+                print(node_l)
                 # right child
+                print("\ndefine right child")
                 meta_r, node_r = define_node(
                     args,
                     node_index=nextind+1, level=lyr+1,
                     parent_index=node_idx, tree_struct=tree_struct,
                     identity=identity,
                 )
+                print("\nRight child meta information:")
+                print(meta_r)
+                print("\nRight child module information:")
+                print(node_r)
                 # inheriting solver modules to facilitate optimization:
                 if args.solver_inherit and meta_l['identity'] and meta_r['identity'] and not(node_idx == 0):
                     node_l['classifier'] = tree_modules[node_idx]['classifier']
@@ -560,6 +576,7 @@ def grow_tree_nodewise():
 
                 # -------------------- (2) Extend ----------------------------
                 # define a tree with node extension
+                print("\ndefine extended child")
                 meta_e, node_e = define_node(
                     args,
                     node_index=nextind,
@@ -568,6 +585,10 @@ def grow_tree_nodewise():
                     tree_struct=tree_struct,
                     identity=False,
                 )
+                print("\nExtended child meta information:")
+                print(meta_e)
+                print("\nExtended child module information:")
+                print(node_e)
                 # Set the router at the current node as one-sided One().
                 # TODO: this is not ideal as it changes tree_modules
                 tree_modules[node_idx]['router'] = One()
@@ -579,7 +600,7 @@ def grow_tree_nodewise():
                                  child_extension=node_e,
                                  cuda_on=args.cuda)
 
-                # ---------------------- Optimise -----------------------------
+                # ---------------------- Optimize -----------------------------
                 best_tr_loss = records['train_best_loss']
                 best_va_loss = records['valid_best_loss']
                 best_te_loss = records['test_best_loss']
@@ -588,7 +609,7 @@ def grow_tree_nodewise():
                 if args.cuda:
                     model_split.cuda()
 
-                # split and optimise
+                # split and optimize
                 model_split, tree_modules_split, node_l, node_r \
                     = optimize_fixed_tree(model_split, tree_struct,
                                           train_loader, valid_loader, test_loader,
@@ -598,11 +619,6 @@ def grow_tree_nodewise():
                 best_tr_loss_after_split = records['train_best_loss']
                 best_va_loss_adter_split = records['valid_best_loss_nodes_split'][node_idx]
                 best_te_loss_after_split = records['test_best_loss']
-                # print("debug loss")
-                # print(best_tr_loss)
-                # print(best_tr_loss_after_split)
-                # print(best_va_loss)
-                # print(best_va_loss_adter_split)
                 tree_struct[node_idx]['train_accuracy_gain_split'] \
                     = best_tr_loss - best_tr_loss_after_split
                 tree_struct[node_idx]['valid_accuracy_gain_split'] \
@@ -615,7 +631,7 @@ def grow_tree_nodewise():
                     if args.cuda:
                         model_ext.cuda()
 
-                    # make deeper and optimise
+                    # make deeper and optimize
                     model_ext, tree_modules_ext, node_e \
                         = optimize_fixed_tree(model_ext, tree_struct,
                                               train_loader, valid_loader, test_loader,
@@ -640,7 +656,10 @@ def grow_tree_nodewise():
                 
                 # ---------- Decide whether to split, extend or keep -----------
                 criteria = get_decision(args.criteria, node_idx, tree_struct)
-
+                print("\n At node " + str(node_idx) + "layer" + str(lyr))
+                print("\nDecision: ", criteria)
+                print("Split Gain:", tree_struct[node_idx]['valid_accuracy_gain_split'])
+                print("Ext. Gain:", tree_struct[node_idx]['valid_accuracy_gain_ext'])
                 if criteria == 'split':
                     print("\nSplitting node " + str(node_idx))
                     # update the parent node
@@ -659,6 +678,7 @@ def grow_tree_nodewise():
                     tree_modules = tree_modules_split
                     nextind += 2
                     change = True
+
                 elif criteria == 'extend':
                     print("\nExtending node " + str(node_idx))
                     # update the parent node
@@ -674,6 +694,7 @@ def grow_tree_nodewise():
                     tree_modules = tree_modules_ext
                     nextind += 1
                     change = True
+
                 else:
                     # revert weights back to state before split
                     print("No splitting at node " + str(node_idx))

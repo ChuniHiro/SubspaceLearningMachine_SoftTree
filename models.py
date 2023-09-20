@@ -6,8 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 from ops import get_leaf_nodes, get_past_leaf_nodes, get_path_to_root
-
-
+import numpy as np
+import math
 class Tree(nn.Module):
     """ Adaptive Neural Tree module. """
     def __init__(self,
@@ -51,6 +51,7 @@ class Tree(nn.Module):
                 which computes the predictive distribution as the mean
                 of the conditional distributions from all the leaf nodes,
                 weighted by the corresponding reaching probabilities.
+
                 If set to False, inference based on "hard" decisions is
                 performed. If the routers are defined with
                 stochastic=True, then the stochastic single-path inference
@@ -560,6 +561,7 @@ class ResidualTransformer(nn.Module):
     Got the base codes from
     https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py
     """
+
     def __init__(self, input_nc, input_width, input_height, 
                  ngf=6, stride=1, **kwargs):
         super(ResidualTransformer, self).__init__()
@@ -584,6 +586,8 @@ class ResidualTransformer(nn.Module):
         return self.forward(x).data.numpy().shape
 
     def forward(self, x):
+
+        print("using bottleneck residual transformer")
         residual = x
         out = self.conv1(x)
         out = self.relu(out)
@@ -641,6 +645,155 @@ class VGG13ConvPool(nn.Module):
         else:
             return out
 
+# reverse residual block for Edge
+# def _make_divisible(v, divisor, min_value=None):
+#     """
+#     This function is taken from the original tf repo.
+#     It ensures that all layers have a channel number that is divisible by 8
+#     It can be seen here:
+#     https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
+#     :param v:
+#     :param divisor:
+#     :param min_value:
+#     :return:
+#     """
+#     if min_value is None:
+#         min_value = divisor
+#     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+#     # Make sure that round down does not go down by more than 10%.
+#     if new_v < 0.9 * v:
+#         new_v += divisor
+#     return new_v
+
+def make_divisible(x, divisible_by=8):
+    
+    return int(np.ceil(x * 1. / divisible_by) * divisible_by)
+
+
+def conv_bn(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
+
+def conv_3x3_bn(inp, oup, stride):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
+
+
+def conv_1x1_bn(inp, oup):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
+
+class InvertedResidual(nn.Module):
+    def __init__(self, inp, oup, stride, expand_ratio):
+        super(InvertedResidual, self).__init__()
+        assert stride in [1, 2]
+
+        hidden_dim = round(inp * expand_ratio)
+        self.identity = stride == 1 and inp == oup
+
+        if expand_ratio == 1:
+            self.conv = nn.Sequential(
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+        else:
+            self.conv = nn.Sequential(
+                # pw
+                nn.Conv2d(inp, hidden_dim, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # dw
+                nn.Conv2d(hidden_dim, hidden_dim, 3, stride, 1, groups=hidden_dim, bias=False),
+                nn.BatchNorm2d(hidden_dim),
+                nn.ReLU6(inplace=True),
+                # pw-linear
+                nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
+                nn.BatchNorm2d(oup),
+            )
+
+    def forward(self, x):
+        if self.identity:
+            return x + self.conv(x)
+        else:
+            return self.conv(x)
+
+class Edge_MBV2(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
+        super(Edge_MBV2, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+
+        interverted_residual_setting = [
+            # t, c, n, s
+            [expansion_rate, ngf, 1, stride],
+        ]
+
+        # print("using MBV2")
+        # print("check settings")
+        # print(interverted_residual_setting)
+
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+
+        # print("chekc MBv2 model")
+        # print(self.features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the transformer to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
 
 # ########################### (2) Routers ##################################
 class One(nn.Module):
@@ -681,6 +834,7 @@ class Router(nn.Module):
         return x
                 
     def output_controller(self, x):
+
         # soft decision
         if self.soft_decision:
             return self.sigmoid(x)
@@ -689,6 +843,8 @@ class Router(nn.Module):
         if self.stochastic:
             x = self.sigmoid(x)
             return ops.ST_StochasticIndicator()(x)
+        
+        # soft greedy decision:
         else:
             x = self.sigmoid(x)
             return ops.ST_Indicator()(x)
@@ -977,6 +1133,90 @@ class RouterGAPwithConv_TwoFClayers(nn.Module):
             return ops.ST_Indicator()(x)
 
 
+class InnerGAPwithMBv2Conv_TwoFClayers(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height,
+                width_mult = 1.0,stride = 1, ngf = 32, 
+                soft_decision=True,
+                stochastic=False,
+                dropout_prob=0.0,
+                expansion_rate = 2, 
+                reduction_rate = 2,
+                **kwargs):
+        super(RouterGAPwithMBv2Conv_TwoFClayers, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+        self.ngf = ngf
+        self.soft_decision = soft_decision
+        self.stochastic=stochastic
+        self.dropout_prob = dropout_prob
+
+        interverted_residual_setting = [
+            # t, c, n, s
+            [expansion_rate, ngf, 1, stride],
+        ]
+
+        # print("using MBV2")
+        # print("check settings")
+        # print(interverted_residual_setting)
+
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+        self.fc1 = nn.Linear(ngf, int(ngf/reduction_rate) + 1)
+        self.fc2 = nn.Linear(int(ngf/reduction_rate) + 1, 1)
+        self.sigmoid = nn.Sigmoid()
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.mean(dim=-1).mean(dim=-1).squeeze()  # global average pooling
+        # 2 fc layers:
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training, p=self.dropout_prob)
+        x = self.fc2(x).squeeze()
+        # get probability of "left" or "right"
+        x = self.output_controller(x)
+        return x
+
+    def output_controller(self, x):
+        # soft decision
+        if self.soft_decision:
+            return self.sigmoid(x)
+
+        # stochastic hard decision:
+        if self.stochastic:
+            x = self.sigmoid(x)
+            return ops.ST_StochasticIndicator()(x)
+        else:
+            x = self.sigmoid(x)
+            return ops.ST_Indicator()(x)
+        
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+
 # ############################ (3) Solvers ####################################
 class LR(nn.Module):
     """ Logistinc regression
@@ -1085,3 +1325,66 @@ class Solver_GAP_OneFClayers(nn.Module):
         x = F.dropout(x, training=self.training, p=self.dropout_prob)
         x = self.fc1(x)
         return F.log_softmax(x)
+
+
+class Child_MBV2(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, 
+                 num_classes = 10, 
+                 width_mult = 1.0,
+                 stride = 1, 
+                 ngf = 32, 
+                 dropout_prob=0.0,
+                 reduction_rate = 2,
+                 expansion_rate = 2, 
+                 **kwargs):
+        super(Child_MBV2, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+
+        interverted_residual_setting = [
+            # t, c, n, s
+            [expansion_rate, ngf, 1, stride],
+        ]
+        self.dropout_prob = dropout_prob
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+        self.fc1 = nn.Linear(ngf, int(ngf/reduction_rate) + 1)
+        self.fc2 = nn.Linear(int(ngf/reduction_rate) + 1, num_classes)
+        self._initialize_weights()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.mean(dim=-1).mean(dim=-1).squeeze()  # global average pooling
+        # 2 fc layers:
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training, p=self.dropout_prob)
+        x = self.fc2(x)
+        return F.log_softmax(x)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
