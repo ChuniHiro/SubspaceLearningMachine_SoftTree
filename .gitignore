@@ -1,3 +1,4 @@
 *.pyc
 /experiments/*
 __pycache__/*
+/tiny_imagenet/tiny-imagenet-200/*

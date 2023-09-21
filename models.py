@@ -1442,12 +1442,12 @@ class MLP_AlexNet(nn.Module):
 class Solver_GAP_OneFClayers(nn.Module):
     """ GAP + fc1 """
     def __init__(self, input_nc, input_width, input_height, 
-                 dropout_prob=0.0, reduction_rate=2, **kwargs):
+                 dropout_prob=0.0, reduction_rate=2, num_classes = 10, **kwargs):
         super(Solver_GAP_OneFClayers, self).__init__()
         self.dropout_prob = dropout_prob
         self.reduction_rate = reduction_rate
 
-        self.fc1 = nn.Linear(input_nc, 10)
+        self.fc1 = nn.Linear(input_nc, num_classes)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -1458,6 +1458,71 @@ class Solver_GAP_OneFClayers(nn.Module):
         return F.log_softmax(x)
 
 
+class Child_MBV2GAP(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, 
+                 num_classes = 10, 
+                 width_mult = 1.0,
+                 stride = 1, 
+                 ngf = 32, 
+                 dropout_prob=0.0,
+                 reduction_rate = 2,
+                 expansion_rate = 2, 
+                 **kwargs):
+        super(Child_MBV2GAP, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+
+        interverted_residual_setting = [
+            # t, c, n, s
+            [expansion_rate, ngf, 1, stride],
+        ]
+        self.dropout_prob = dropout_prob
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+        self.fc1 = nn.Linear(ngf, int(ngf/reduction_rate) + 1)
+        
+        # print("check num_classes in MBv2 solver", num_classes)
+        
+        self.fc2 = nn.Linear(int(ngf/reduction_rate) + 1, num_classes)
+        self._initialize_weights()
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.mean(dim=-1).mean(dim=-1).squeeze()  # global average pooling
+        # 2 fc layers:
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training, p=self.dropout_prob)
+        x = self.fc2(x)
+        return F.log_softmax(x)
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+                
 class Child_MBV2(nn.Module):
 
     def __init__(self, input_nc, input_width, input_height, 
@@ -1491,14 +1556,19 @@ class Child_MBV2(nn.Module):
 
         # make it nn.Sequential
         self.features = nn.Sequential(*self.features)
-        self.fc1 = nn.Linear(ngf, int(ngf/reduction_rate) + 1)
-        self.fc2 = nn.Linear(int(ngf/reduction_rate) + 1, num_classes)
+        self.fc_input = output_channel * input_height * input_width // (stride * stride)
+        self.fc1 = nn.Linear(self.fc_input, int(self.fc_input/reduction_rate) + 1)
+        
+        # print("check num_classes in MBv2 solver", num_classes)
+        
+        self.fc2 = nn.Linear(int(self.fc_input/reduction_rate) + 1, num_classes)
         self._initialize_weights()
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
         x = self.features(x)
-        x = x.mean(dim=-1).mean(dim=-1).squeeze()  # global average pooling
+        x = x.view(x.size(0), -1)
+        print("check x shape in MBv2 solver", x.shape)
         # 2 fc layers:
         x = F.relu(self.fc1(x))
         x = F.dropout(x, training=self.training, p=self.dropout_prob)

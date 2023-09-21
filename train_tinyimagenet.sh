@@ -1,0 +1,26 @@
+python train.py --experiment tiny_imagenet    \
+               --subexperiment Vit_run0 \
+               --dataset tiny-imagenet   \
+               --lr 0.002 \
+               --router_ver 8      \
+               --router_ngf 64     \
+               --router_k 3        \
+               --transformer_ver 6   \
+               --transformer_ngf 64  \
+               --transformer_k 3     \
+               --transformer_expansion_rate 2 \
+               --solver_ver 7       \
+               --batch_norm         \
+               --maxdepth 5       \
+               --batch-size 16   \
+               --scheduler step_lr  \
+               --criteria avg_valid_loss  \
+               --epochs_patience 50 \
+               --epochs_node 10  \
+               --epochs_finetune 25 \
+               --seed 0    \
+               --num_workers 0 \
+               --visualize_split \
+               --finetune_during_growth \
+               --num-classes 200 
+               

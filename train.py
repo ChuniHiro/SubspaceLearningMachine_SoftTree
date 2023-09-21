@@ -30,6 +30,7 @@ parser.add_argument('--experiment', '-e', dest='experiment', default='tree', hel
 parser.add_argument('--subexperiment','-sube', dest='subexperiment', default='', help='experiment name')
 
 parser.add_argument('--dataset', default='mnist', help='dataset type')
+parser.add_argument('--num-classes', type=int, default=10, metavar='N', help='number of classes for the dataset')
 parser.add_argument('--no-cuda', action='store_true', default=False, help='disables CUDA training')
 parser.add_argument('--gpu', type=str, default="", help='which GPU to use')
 parser.add_argument('--seed', type=int, default=0, metavar='S', help='random seed')

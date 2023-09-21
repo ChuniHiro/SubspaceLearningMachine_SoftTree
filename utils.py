@@ -115,10 +115,11 @@ def define_node(
     print(meta['out_shape'], type(meta['out_shape']))
 
     # ---------------------------- define solver-------------------------------
-    config_s = {'no_classes': args.no_classes,
+    config_s = {'num_classes': args.num_classes,
                 'dropout_prob': args.solver_dropout_prob,
                 'batch_norm': args.batch_norm}
-    solver = define_solver(args.solver_ver, 
+    # print("check num classes: ", args.num_classes)
+    solver = define_solver(args.solver_ver,
                            meta['out_shape'][1], meta['out_shape'][2], meta['out_shape'][3],
                            **config_s)
 
@@ -198,7 +199,7 @@ def define_solver(version, input_nc, input_width, input_height, **kwargs):
     elif version == 6:  # GAP + 1 FC layer
         return models.Solver_GAP_OneFClayers(input_nc, input_width, input_height, **kwargs)
     elif version == 7:
-        return models.Child_MBV2(input_nc, input_width, input_height, **kwargs)
+        return models.Child_MBV2GAP(input_nc, input_width, input_height,  **kwargs)
     else:
         raise NotImplementedError("Specified solver module not available!")
 
