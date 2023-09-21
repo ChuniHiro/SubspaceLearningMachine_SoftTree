@@ -119,7 +119,7 @@ train_loader, valid_loader, test_loader, NUM_TRAIN, NUM_VALID = get_dataloaders(
 args.input_nc, args.input_width, args.input_height, args.classes = \
     get_dataset_details(args.dataset)
 args.no_classes = len(args.classes)
-
+args.stride = 2
 
 # -----------------------------  Components ----------------------------------
 def train(model, data_loader, optimizer, node_idx):

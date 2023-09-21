@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from ops import get_leaf_nodes, get_past_leaf_nodes, get_path_to_root
 import numpy as np
 import math
+from einops import rearrange
 class Tree(nn.Module):
     """ Adaptive Neural Tree module. """
     def __init__(self,
@@ -26,13 +27,13 @@ class Tree(nn.Module):
                 meta information about each node of the tree.
             tree_modules (list): List of dictionaries, each of which contains
                 modules (nn.Module) of each node in the tree and takes the form
-                module = {'transform': transformer_module (nn.Module),
+                module = {'edger': transformer_module (nn.Module),
                           'classifier': solver_module (nn.Module),
                           'router': router_module (nn.Module) }
             split (bool): Set True if the model is testing 'split' growth option
             node_split (int): Index of the node that is being split
             child_left (dict): Left child of the node node_split and takes the
-                form of {'transform': transformer_module (nn.Module),
+                form of {'edger': transformer_module (nn.Module),
                           'classifier': solver_module (nn.Module),
                           'router': router_module (nn.Module) }
             child_right (dict): Right child of the node node_split and takes the
@@ -498,14 +499,15 @@ class Identity(nn.Module):
 class JustConv(nn.Module):
     """ 1 convolution """
     def __init__(self, input_nc, input_width, input_height, 
-                 ngf=6, kernel_size=5, stride=1, **kwargs):
+                 ngf=6, kernel_size=3, stride=1, **kwargs):
         super(JustConv, self).__init__()
 
+        # print("check just conv:", stride)
         if max(input_width, input_height) < kernel_size:
             warnings.warn('Router kernel too large, shrink it')
             kernel_size = max(input_width, input_height)
 
-        self.conv1 = nn.Conv2d(input_nc, ngf, kernel_size, stride=stride)
+        self.conv1 = nn.Conv2d(input_nc, ngf, kernel_size, stride=stride, padding=kernel_size//2)
         self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
 
     def get_outputshape(self, input_nc, input_width, input_height ):
@@ -645,25 +647,7 @@ class VGG13ConvPool(nn.Module):
         else:
             return out
 
-# reverse residual block for Edge
-# def _make_divisible(v, divisor, min_value=None):
-#     """
-#     This function is taken from the original tf repo.
-#     It ensures that all layers have a channel number that is divisible by 8
-#     It can be seen here:
-#     https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
-#     :param v:
-#     :param divisor:
-#     :param min_value:
-#     :return:
-#     """
-#     if min_value is None:
-#         min_value = divisor
-#     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-#     # Make sure that round down does not go down by more than 10%.
-#     if new_v < 0.9 * v:
-#         new_v += divisor
-#     return new_v
+# Mobilenet v2 : reverse residual block for Edge
 
 def make_divisible(x, divisible_by=8):
     
@@ -684,6 +668,12 @@ def conv_3x3_bn(inp, oup, stride):
         nn.ReLU6(inplace=True)
     )
 
+def conv_nxn_bn(inp, oup, kernal_size=3, stride=1):
+    return nn.Sequential(
+        nn.Conv2d(inp, oup, kernal_size, stride, 1, bias=False),
+        nn.BatchNorm2d(oup),
+        nn.ReLU6(inplace=True)
+    )
 
 def conv_1x1_bn(inp, oup):
     return nn.Sequential(
@@ -743,9 +733,9 @@ class Edge_MBV2(nn.Module):
             [expansion_rate, ngf, 1, stride],
         ]
 
-        # print("using MBV2")
-        # print("check settings")
-        # print(interverted_residual_setting)
+        print("using MBV2")
+        print("check settings")
+        print(interverted_residual_setting)
 
         self.features = []
         # building inverted residual blocks
@@ -786,7 +776,7 @@ class Edge_MBV2(nn.Module):
                 m.bias.data.zero_()
 
     def get_outputshape(self, input_nc, input_width, input_height ):
-        """ Run a single forward pass through the transformer to get the 
+        """ Run a single forward pass through the edger to get the 
         output size
         """
         dtype = torch.FloatTensor
@@ -794,6 +784,146 @@ class Edge_MBV2(nn.Module):
             torch.randn(1, input_nc, input_width, input_height).type(dtype),
             requires_grad=False)
         return self.forward(x).size()
+
+
+## vision transformer block
+
+class PreNorm(nn.Module):
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = nn.LayerNorm(dim)
+        self.fn = fn
+    
+    def forward(self, x, **kwargs):
+        return self.fn(self.norm(x), **kwargs)
+
+
+class FeedForward(nn.Module):
+    def __init__(self, dim, hidden_dim, dropout=0.):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(dim, hidden_dim),
+            nn.SiLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(dropout)
+        )
+    
+    def forward(self, x):
+        return self.net(x)
+
+class Attention(nn.Module):
+    def __init__(self, dim, heads=8, dim_head=64, dropout=0.):
+        super().__init__()
+        inner_dim = dim_head *  heads
+        project_out = not (heads == 1 and dim_head == dim)
+
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+
+        self.attend = nn.Softmax(dim = -1)
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+
+        self.to_out = nn.Sequential(
+            nn.Linear(inner_dim, dim),
+            nn.Dropout(dropout)
+        ) if project_out else nn.Identity()
+
+    def forward(self, x):
+        qkv = self.to_qkv(x).chunk(3, dim=-1)
+        q, k, v = map(lambda t: rearrange(t, 'b p n (h d) -> b p h n d', h = self.heads), qkv)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        attn = self.attend(dots)
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b p h n d -> b p n (h d)')
+        return self.to_out(out)
+
+class Transformer(nn.Module):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout=0.):
+        super().__init__()
+        self.layers = nn.ModuleList([])
+        for _ in range(depth):
+            self.layers.append(nn.ModuleList([
+                PreNorm(dim, Attention(dim, heads, dim_head, dropout)),
+                PreNorm(dim, FeedForward(dim, mlp_dim, dropout))
+            ]))
+    
+    def forward(self, x):
+        for attn, ff in self.layers:
+            x = attn(x) + x
+            x = ff(x) + x
+        return x
+
+class MobileViTBlock(nn.Module):
+    def __init__(self, dim, depth, channel, kernel_size, patch_size, mlp_dim, dropout=0.):
+        super().__init__()
+        self.ph, self.pw = patch_size
+
+        self.conv1 = conv_nxn_bn(channel, channel, kernel_size)
+        self.conv2 = conv_1x1_bn(channel, dim)
+
+        self.transformer = Transformer(dim, depth, 4, 8, mlp_dim, dropout)
+
+        self.conv3 = conv_1x1_bn(dim, channel)
+        self.conv4 = conv_nxn_bn(2 * channel, channel, kernel_size)
+    
+    def forward(self, x):
+        y = x.clone()
+
+        # Local representations
+        x = self.conv1(x)
+        x = self.conv2(x)
+        
+        # Global representations
+        _, _, h, w = x.shape
+        x = rearrange(x, 'b d (h ph) (w pw) -> b (ph pw) (h w) d', ph=self.ph, pw=self.pw)
+        x = self.transformer(x)
+        x = rearrange(x, 'b (ph pw) (h w) d -> b d (h ph) (w pw)', h=h//self.ph, w=w//self.pw, ph=self.ph, pw=self.pw)
+        
+        # Fusion
+        x = self.conv3(x)
+        x = torch.cat((x, y), 1)
+        x = self.conv4(x)
+        return x
+
+class Edge_MBVIT(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
+        super(Edge_MBVIT, self).__init__()
+        block = MobileViTBlock
+        input_channel = input_nc
+
+        # self.mvit.append(MobileViTBlock(dims[0], L[0], channels[5], kernel_size, patch_size, int(dims[0]*2)))
+        dims = ngf
+        channels = input_nc
+        L = 2
+        kernel_size = 3
+        patch_size = (2,2)
+
+        # print("using MBVIT")
+
+        self.features = MobileViTBlock(dims, L, channels, kernel_size, patch_size, int(dims*2))
+
+        # print("chekc MBv2 model")
+        # print(self.features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the edger to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
 
 # ########################### (2) Routers ##################################
 class One(nn.Module):
@@ -1143,6 +1273,7 @@ class InnerGAPwithMBv2Conv_TwoFClayers(nn.Module):
                 expansion_rate = 2, 
                 reduction_rate = 2,
                 **kwargs):
+        
         super(InnerGAPwithMBv2Conv_TwoFClayers, self).__init__()
         block = InvertedResidual
         input_channel = input_nc

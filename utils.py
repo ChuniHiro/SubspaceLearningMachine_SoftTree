@@ -80,11 +80,16 @@ def define_node(
                 'batch_norm': args.batch_norm,
                 'downsample': meta['downsampled'],
                 'expansion_rate': 1,
-                'reduction_rate': 2
+                'reduction_rate': 2,
+                'stride' : 2
                 }
-        transformer_ver = 3
+        transformer_ver = 2 # convolution
 
     else:
+
+        if level > 1:
+            args.transformer_ver = 7
+
         config_t = {'kernel_size': args.transformer_k,
                     'ngf': args.transformer_ngf[level],
                     'batch_norm': args.batch_norm,
@@ -151,6 +156,8 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         return models.VGG13ConvPool(input_nc, input_width, input_height, **kwargs)
     elif version == 6:  # Inverted resudial
         return models.Edge_MBV2(input_nc, input_width, input_height, **kwargs)
+    elif version == 7:  # ViT
+        return models.Edge_MBVIT(input_nc, input_width, input_height, **kwargs)
     else:
         raise NotImplementedError("Specified transformer module not available.")
 
