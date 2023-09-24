@@ -33,6 +33,6 @@ python train.py --dataset mnist \
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
-               --maxdepth 3 \
+               --maxdepth 5 \
                --visualize_split --num_workers 0\
                --seed 0
