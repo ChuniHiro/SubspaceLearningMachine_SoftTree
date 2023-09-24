@@ -1575,13 +1575,14 @@ class MLP_LeNetMNIST(nn.Module):
 class Solver_GAP_TwoFClayers(nn.Module):
     """ GAP + fc1 + fc2 """
     def __init__(self, input_nc, input_width, input_height, 
-                 dropout_prob=0.0, reduction_rate=2, **kwargs):
+                 dropout_prob=0.0, reduction_rate=2,num_classes = 10, **kwargs):
         super(Solver_GAP_TwoFClayers, self).__init__()
+        # print("Solver_GAP_TwoFClayers- num_classes", num_classes)
         self.dropout_prob = dropout_prob
         self.reduction_rate = reduction_rate
         
         self.fc1 = nn.Linear(input_nc, int(input_nc/reduction_rate) + 1)
-        self.fc2 = nn.Linear(int(input_nc/reduction_rate ) + 1, 10)
+        self.fc2 = nn.Linear(int(input_nc/reduction_rate ) + 1, num_classes)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):

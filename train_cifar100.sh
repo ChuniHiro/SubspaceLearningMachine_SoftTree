@@ -1,6 +1,6 @@
 python train.py --experiment mbv3   \
                --subexperiment run0 \
-               --dataset tiny-imagenet   \
+               --dataset cifar100   \
                --lr 0.001 \
                --router_ver 4      \
                --router_ngf 64     \
@@ -12,15 +12,15 @@ python train.py --experiment mbv3   \
                --transformer_expansion_rate 2 \
                --solver_ver 4       \
                --batch_norm         \
-               --maxdepth 5       \
-               --batch-size 64   \
+               --maxdepth 8       \
+               --batch-size 512   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
                --epochs_patience 50 \
-               --epochs_node 1  \
-               --epochs_finetune 1 \
+               --epochs_node 200  \
+               --epochs_finetune 200 \
                --seed 0    \
                --num_workers 0 \
                --finetune_during_growth \
-               --num-classes 200 
-               
+               --num-classes 100 \
+               --augmentation_on

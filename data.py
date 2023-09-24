@@ -335,7 +335,7 @@ def get_dataloaders(
             **kwargs)
         test_loader = torch.utils.data.DataLoader(
             tiny_imagenet_test,
-            batch_size=1000,
+            batch_size=100,
             shuffle=False,
             **kwargs)
 

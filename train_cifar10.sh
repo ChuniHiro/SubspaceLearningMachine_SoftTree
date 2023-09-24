@@ -85,13 +85,13 @@ python train.py --experiment mbv3     \
                --router_ngf 64     \
                --router_k 3        \
                --transformer_ver_root 8\
-               --transformer_ver 6   \
+               --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
                --transformer_expansion_rate 2 \
                --solver_ver 4       \
                --batch_norm         \
-               --maxdepth 6       \
+               --maxdepth 8       \
                --batch-size 256   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
