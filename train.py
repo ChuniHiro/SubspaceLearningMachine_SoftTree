@@ -506,8 +506,8 @@ def grow_tree_nodewise():
     )
     print("\nRoot node meta information:")
     print(root_meta)
-    # print("\nRoot node module information:")
-    # print(root_module)
+    print("\nRoot node module information:")
+    print(root_module)
     tree_struct.append(root_meta)
     tree_modules.append(root_module)
 
