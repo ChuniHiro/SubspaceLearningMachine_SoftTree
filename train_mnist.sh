@@ -22,13 +22,14 @@
 #                --visualise_split 
 
 python train.py --dataset mnist \
-               --experiment mbv3 \
-               --subexperiment  run1 \
-               --batch-size 512  \
+               --experiment mbv3_test \
+               --subexperiment  run0 \
+               --lr 0.0005 \
+               --batch-size 1024  \
                --epochs_patience 20\
-               --epochs_node 200\
+               --epochs_node 100 \
 	           --epochs_finetune 200\
-               -t_ver_root 8\
+               -t_ver_root 9 \
                -t_ver 1 -t_ngf 64 -t_k 3\
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \

@@ -146,24 +146,26 @@ def define_node(
 
 
 def define_transformer(version, input_nc, input_width, input_height, **kwargs):
-    if version == 1:  # Identity function
-        return models.Identity(input_nc, input_width, input_height, **kwargs)
-    elif version == 2:  # 1 conv layer
-        return models.JustConv(input_nc, input_width, input_height, **kwargs)
-    elif version == 3:  # 1 conv layer + 1 max pooling
-        return models.ConvPool(input_nc, input_width, input_height, **kwargs)
-    elif version == 4:  # Bottle-neck residual block
-        return models.ResidualTransformer(input_nc, input_width, input_height, **kwargs)
-    elif version == 5:  # VGG13: 2 conv layer + 1 max pooling
-        return models.VGG13ConvPool(input_nc, input_width, input_height, **kwargs)
-    elif version == 6:  # Inverted resudial
-        return models.Edge_MBV2(input_nc, input_width, input_height, **kwargs)
-    elif version == 7:  # ViT
-        return models.Edge_MBVIT(input_nc, input_width, input_height, **kwargs)
-    elif version == 8:  # mbv3
-        return models.Root_MobileNetV3(input_nc, input_width, input_height, **kwargs)
-    else:
+
+    version_dict = {
+        1: models.Identity, # Identity function
+        2: models.JustConv, # 1 conv layer
+        3: models.ConvPool, # 1 conv layer + 1 max pooling
+        4: models.ResidualTransformer,  # Bottle-neck residual block
+        5: models.VGG13ConvPool, # VGG13: 2 conv layer + 1 max pooling
+        6: models.Edge_MBV2, # Inverted resudial
+        7: models.Edge_MBVIT, # ViT
+        8: models.Root_MobileNetV3, # mbv3
+        9: models.Root_MBV2, # mbv2
+    }
+    if version not in version_dict.keys():
+
         raise NotImplementedError("Specified transformer module not available.")
+    
+    else:
+
+        return version_dict[version](input_nc, input_width, input_height, **kwargs)
+
 
 
 def define_router(version, input_nc, input_width, input_height, **kwargs):

@@ -77,25 +77,25 @@
 #                --transformer_expansion_rate 2
 
 
-python train.py --experiment mbv3     \
+python train.py --experiment mbv2     \
                --subexperiment run0 \
                --dataset cifar10   \
-               --lr 0.001 \
+               --lr 0.0001 \
                --router_ver 4      \
                --router_ngf 64     \
                --router_k 3        \
-               --transformer_ver_root 8\
+               --transformer_ver_root 9\
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
                --transformer_expansion_rate 2 \
                --solver_ver 4       \
                --batch_norm         \
-               --maxdepth 8       \
-               --batch-size 256   \
+               --maxdepth 6       \
+               --batch-size 64  \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
-               --epochs_patience 25 \
+               --epochs_patience 200 \
                --epochs_node 200  \
                --epochs_finetune 200 \
                --seed 0    \
