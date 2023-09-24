@@ -131,7 +131,7 @@ def get_dataloaders(
             transform_train = transforms.Compose(
                 [
                     transforms.RandomCrop(32, padding=4),
-                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomHorizontalFlip(0.5),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
@@ -147,19 +147,34 @@ def get_dataloaders(
                 ],
             )
         else:
+            # transform_train = transforms.Compose(
+            #     [
+            #         transforms.ToTensor(),
+            #         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            #     ],
+            # )
+            # transform_test = transforms.Compose(
+            #     [
+            #         transforms.ToTensor(),
+            #         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            #     ],
+            # )
+
             transform_train = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
                 ],
             )
             transform_test = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
                 ],
             )
-
+            
         cifar10_train = torchvision.datasets.CIFAR10(
             root='../data', train=True, download=True,
             transform=transform_train,
@@ -193,14 +208,17 @@ def get_dataloaders(
         
     
     elif dataset == 'cifar100':
+        # reference:
+        # mean=(0.5071, 0.4867, 0.4408), std=(0.2675, 0.2565, 0.2761)
         if augmentation_on:
             transform_train = transforms.Compose(
                 [
                     transforms.RandomCrop(32, padding=4),
-                    transforms.RandomHorizontalFlip(),
+                    transforms.RandomHorizontalFlip(0.5),
                     transforms.ToTensor(),
                     transforms.Normalize(
-                        (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
+                        # (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
+                        (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761),
                     ),
                 ],
             )
@@ -208,7 +226,8 @@ def get_dataloaders(
                 [
                     transforms.ToTensor(),
                     transforms.Normalize(
-                        (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
+                        # (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
+                        (0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761),
                     ),
                 ],
             )
@@ -216,13 +235,15 @@ def get_dataloaders(
             transform_train = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
                 ],
             )
             transform_test = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    # transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                    transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
                 ],
             )
 
@@ -239,7 +260,7 @@ def get_dataloaders(
         )
 
         TOTAL_NUM = 50000
-        NUM_VALID = int(round(TOTAL_NUM * 0.02))
+        NUM_VALID = int(round(TOTAL_NUM * 0.05))
         NUM_TRAIN = int(round(TOTAL_NUM - NUM_VALID))
         train_loader = torch.utils.data.DataLoader(
             cifar100_train,

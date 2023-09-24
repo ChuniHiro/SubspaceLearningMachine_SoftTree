@@ -1,16 +1,18 @@
-python train.py --experiment mbv3   \
+python train.py --experiment mbv2   \
                --subexperiment run0 \
                --dataset cifar100   \
-               --lr 0.001 \
+               --lr 0.0001 \
                --router_ver 4      \
                --router_ngf 64     \
                --router_k 3        \
-               --transformer_ver_root 8\
+               --router_dropout_prob 0.2 \
+               --transformer_ver_root 9\
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
                --transformer_expansion_rate 2 \
                --solver_ver 4       \
+               --solver_dropout_prob 0.2 \
                --batch_norm         \
                --maxdepth 8       \
                --batch-size 512   \
@@ -24,3 +26,4 @@ python train.py --experiment mbv3   \
                --finetune_during_growth \
                --num-classes 100 \
                --augmentation_on
+               
