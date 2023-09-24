@@ -523,6 +523,12 @@ def grow_tree_nodewise():
         model, tree_struct,
         train_loader, valid_loader, test_loader, args.epochs_node, node_idx=0,
     )
+    node_idx = 0
+    print("saved the model.pth for root node")
+    checkpoint_model('model.pth', struct=tree_struct, modules=tree_modules,
+                        data_loader=test_loader,
+                        figname='hist_split_node_{:03d}.png'.format(node_idx))
+    checkpoint_msc(tree_struct, records)
     
     # ######################## 1: Growth phase starts ########################
     nextind = 1

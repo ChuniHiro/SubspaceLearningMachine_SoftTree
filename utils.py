@@ -157,6 +157,7 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         7: models.Edge_MBVIT, # ViT
         8: models.Root_MobileNetV3, # mbv3
         9: models.Root_MBV2, # mbv2
+        10: models.Root_MBV2light, # mbv2 lighter version
     }
     if version not in version_dict.keys():
 
