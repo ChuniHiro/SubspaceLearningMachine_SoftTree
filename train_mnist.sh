@@ -22,10 +22,10 @@
 #                --visualise_split 
 
 python train.py --dataset mnist \
-               --experiment mbv3_test \
+               --experiment mbv2 \
                --subexperiment  run0 \
-               --lr 0.0005 \
-               --batch-size 1024  \
+               --lr 0.0002 \
+               --batch-size 64  \
                --epochs_patience 20\
                --epochs_node 100 \
 	           --epochs_finetune 200\
@@ -36,4 +36,5 @@ python train.py --dataset mnist \
                -ds_int 1 \
                --maxdepth 5 \
                --visualize_split --num_workers 0\
-               --seed 0
+               --seed 0\
+               --augmentation_on
