@@ -872,9 +872,21 @@ class Root_MBV2(nn.Module):
         block = InvertedResidual
         input_channel = input_nc
 
+        # interverted_residual_setting = [
+        #     # standard setting for mobilev2
+        #     # t, c, n, s
+        #     [1, 16, 1, 1],
+        #     [6, 24, 2, 2],
+        #     [6, 32, 3, 2],
+        #     [6, 64, 4, 2],
+        #     [6, 96, 3, 1],
+        #     [6, 160, 3, 2],
+        #     [6, 320, 1, 1],
+        #     [6, 1280, 1, 1],
+        #     [6, 1280, 1, 1],
+        # ]
+        
         interverted_residual_setting = [
-            # standard setting for mobilev2
-            # t, c, n, s
             [1, 16, 1, 1],
             [6, 24, 2, 2],
             [6, 32, 3, 2],
@@ -882,13 +894,74 @@ class Root_MBV2(nn.Module):
             [6, 96, 3, 1],
             [6, 160, 3, 2],
             [6, 320, 1, 1],
-            [6, 1280, 1, 1],
-            [6, 1280, 1, 1],
         ]
-
         # print("using MBV2")
         # print("check settings")
         # print(interverted_residual_setting)
+
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+
+        # print("chekc MBv2 model")
+        # print(self.features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the edger to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
+class Root_MBV2light(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
+        super(Root_MBV2light, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+        
+        interverted_residual_setting = [
+            [1, 16, 1, 1],
+            [6, 24, 2, 2],
+            [6, 32, 2, 2],
+            [6, 64, 3, 2],
+            [6, 96, 2, 1],
+            [6, 160, 2, 2],
+        ]
 
         self.features = []
         # building inverted residual blocks
@@ -1630,7 +1703,7 @@ class MLP_LeNetMNIST(nn.Module):
     """ The last fully connected part of LeNet MNIST:
     https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet.prototxt
     """
-    def __init__(self, input_nc, input_width, input_height, dropout_prob=0.0, **kwargs):
+    def __init__(self, input_nc, input_width, input_height, dropout_prob=0.1, **kwargs):
         super(MLP_LeNetMNIST, self).__init__()
         self.dropout_prob = dropout_prob
         ngf = input_nc*input_width*input_height
@@ -1648,13 +1721,14 @@ class MLP_LeNetMNIST(nn.Module):
 class Solver_GAP_TwoFClayers(nn.Module):
     """ GAP + fc1 + fc2 """
     def __init__(self, input_nc, input_width, input_height, 
-                 dropout_prob=0.0, reduction_rate=2, **kwargs):
+                 dropout_prob=0.1, reduction_rate=2,num_classes = 10, **kwargs):
         super(Solver_GAP_TwoFClayers, self).__init__()
+        # print("Solver_GAP_TwoFClayers- num_classes", num_classes)
         self.dropout_prob = dropout_prob
         self.reduction_rate = reduction_rate
         
         self.fc1 = nn.Linear(input_nc, int(input_nc/reduction_rate) + 1)
-        self.fc2 = nn.Linear(int(input_nc/reduction_rate ) + 1, 10)
+        self.fc2 = nn.Linear(int(input_nc/reduction_rate ) + 1, num_classes)
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
@@ -1671,7 +1745,7 @@ class MLP_AlexNet(nn.Module):
     """ The last fully connected part of LeNet MNIST:
     https://github.com/BVLC/caffe/blob/master/examples/mnist/lenet.prototxt
     """
-    def __init__(self, input_nc, input_width, input_height, dropout_prob=0.0, **kwargs):
+    def __init__(self, input_nc, input_width, input_height, dropout_prob=0.1, **kwargs):
         super(MLP_AlexNet, self).__init__()
         self.dropout_prob = dropout_prob
         ngf = input_nc * input_width * input_height
