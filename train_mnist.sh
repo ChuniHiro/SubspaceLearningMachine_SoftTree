@@ -22,16 +22,17 @@
 #                --visualise_split 
 
 python train.py --dataset mnist \
-               --experiment batch512_depth6 \
-               --subexperiment  run0 \
-               --batch-size 1024  \
-               --epochs_patience 2\
-               --epochs_node 50\
-	           --epochs_finetune 100\
-               -t_ver 3 -t_ngf 64 -t_k 3\
-               -r_ver 6 -r_ngf 64 -r_k 3 \
+               --experiment mbv3 \
+               --subexperiment  run1 \
+               --batch-size 512  \
+               --epochs_patience 20\
+               --epochs_node 200\
+	           --epochs_finetune 200\
+               -t_ver_root 8\
+               -t_ver 1 -t_ngf 64 -t_k 3\
+               -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
-               --maxdepth 5 \
+               --maxdepth 3 \
                --visualize_split --num_workers 0\
-               --seed 1
+               --seed 0

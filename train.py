@@ -60,6 +60,7 @@ parser.add_argument('--router_ngf', '-r_ngf', dest='router_ngf', type=int, defau
 parser.add_argument('--router_k', '-r_k', dest='router_k', type=int, default=28, help='kernel size in routing function')
 parser.add_argument('--router_dropout_prob', '-r_drop', dest='router_dropout_prob', type=float, default=0.0, help='drop-out probabilities for router modules.')
 
+parser.add_argument('--transformer_ver_root', '-t_ver_root', dest='transformer_ver_root', type=int, default=1, help='default transformer version for root node')
 parser.add_argument('--transformer_ver', '-t_ver', dest='transformer_ver', type=int, default=1, help='default transformer version: identity')
 parser.add_argument('--transformer_ngf', '-t_ngf', dest='transformer_ngf', type=int, default=3, help='number of feature maps in residual transformer')
 parser.add_argument('--transformer_k', '-t_k', dest='transformer_k', type=int, default=5, help='kernel size in transfomer function')
@@ -505,8 +506,8 @@ def grow_tree_nodewise():
     )
     print("\nRoot node meta information:")
     print(root_meta)
-    print("\nRoot node module information:")
-    print(root_module)
+    # print("\nRoot node module information:")
+    # print(root_module)
     tree_struct.append(root_meta)
     tree_modules.append(root_module)
 

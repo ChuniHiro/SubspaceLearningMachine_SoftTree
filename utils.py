@@ -74,7 +74,7 @@ def define_node(
     # print("args.transformer_ngf", args.transformer_ngf)
     # get the transformer version: 
     if not tree_struct: 
-        # if it's first node, then set it to a standard convolutional layer
+        # if it's first node, then set it to root transformer version
         config_t = {'kernel_size': 3,
                 'ngf': args.transformer_ngf[level],
                 'batch_norm': args.batch_norm,
@@ -83,12 +83,13 @@ def define_node(
                 'reduction_rate': 2,
                 'stride' : 2
                 }
-        transformer_ver = 2 # convolution
+        # transformer_ver = 2 # convolution
+        transformer_ver = args.transformer_ver_root
 
     else:
 
-        if level > 1:
-            args.transformer_ver = 7
+        # if level > 1 and args.transformer_ver == 6:
+        #     args.transformer_ver = 7
 
         config_t = {'kernel_size': args.transformer_k,
                     'ngf': args.transformer_ngf[level],
@@ -159,6 +160,8 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         return models.Edge_MBV2(input_nc, input_width, input_height, **kwargs)
     elif version == 7:  # ViT
         return models.Edge_MBVIT(input_nc, input_width, input_height, **kwargs)
+    elif version == 8:  # mbv3
+        return models.Root_MobileNetV3(input_nc, input_width, input_height, **kwargs)
     else:
         raise NotImplementedError("Specified transformer module not available.")
 

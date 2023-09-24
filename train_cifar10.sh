@@ -91,14 +91,15 @@ python train.py --experiment cifar10     \
                --solver_ver 7       \
                --batch_norm         \
                --maxdepth 6       \
-               --batch-size 1024   \
+               --batch-size 32   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
-               --epochs_patience 50 \
+               --epochs_patience 25 \
                --epochs_node 50  \
                --epochs_finetune 100 \
                --seed 0    \
                --num_workers 0 \
                --visualize_split \
                --finetune_during_growth \
+               --augmentation_on
                
