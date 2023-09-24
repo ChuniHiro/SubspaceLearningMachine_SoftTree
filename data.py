@@ -121,7 +121,7 @@ def get_dataloaders(
 
         test_loader = torch.utils.data.DataLoader(
             mnist_test,
-            batch_size=1000,
+            batch_size=batch_size,
             shuffle=False,
             **kwargs)
 
@@ -187,7 +187,7 @@ def get_dataloaders(
             **kwargs)
         test_loader = torch.utils.data.DataLoader(
             cifar10_test,
-            batch_size=1000,
+            batch_size=batch_size,
             shuffle=False,
             **kwargs)
         
@@ -253,7 +253,7 @@ def get_dataloaders(
             **kwargs)
         test_loader = torch.utils.data.DataLoader(
             cifar100_test,
-            batch_size=1000,
+            batch_size=batch_size,
             shuffle=False,
             **kwargs)
         
@@ -335,7 +335,7 @@ def get_dataloaders(
             **kwargs)
         test_loader = torch.utils.data.DataLoader(
             tiny_imagenet_test,
-            batch_size=1000,
+            batch_size=batch_size,
             shuffle=False,
             **kwargs)
 

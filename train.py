@@ -40,7 +40,7 @@ parser.add_argument('--num_workers', type=int, default=0, metavar='N', help='num
 parser.add_argument('--batch-size', type=int, default=256, metavar='N', help='input batch size for training')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N', help='how many batches to wait before logging training status')
 parser.add_argument('--augmentation_on', action='store_true', default=False, help='perform data augmentation')
-parser.add_argument('--lr', type=float, default=0.001, metavar='LR', help='learning rate')
+parser.add_argument('--lr', type=float, default=0.0001, metavar='LR', help='learning rate')
 parser.add_argument('--scheduler', type=str, default="", help='learning rate scheduler')
 parser.add_argument('--momentum', type=float, default=0.5, metavar='M', help='SGD momentum')
 parser.add_argument('--valid_ratio', '-vr', dest='valid_ratio', type=float, default=0.1, metavar='LR', help='validation set ratio')
