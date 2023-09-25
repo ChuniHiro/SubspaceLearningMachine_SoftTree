@@ -245,7 +245,9 @@ class Tree(nn.Module):
                 prob = prob * (1.0 - self.tree_modules[node].router(input))
 
         if not (isinstance(prob, float)):
-            prob = torch.unsqueeze(prob, 1)
+            print("prob before:", prob)
+            prob = torch.unsqueeze(prob, -1)
+            print("prob after:", prob)
 
         node_final = nodes[-1]
         input = self.tree_modules[node_final].transform(input)

@@ -74,7 +74,7 @@ def get_dataloaders(
 
         test_loader = torch.utils.data.DataLoader(
             mnist_test,
-            batch_size=1000,
+            batch_size=batch_size,
             shuffle=False,
             **kwargs)
         
