@@ -97,7 +97,8 @@ def define_node(
                     'batch_norm': args.batch_norm,
                     'downsample': meta['downsampled'],
                     'expansion_rate': args.transformer_expansion_rate,
-                    'reduction_rate': args.transformer_reduction_rate
+                    'reduction_rate': args.transformer_reduction_rate,
+                    'width_mult': args.transformer_width_mult,
                     }
         transformer_ver = args.transformer_ver
 
