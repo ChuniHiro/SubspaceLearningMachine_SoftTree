@@ -36,10 +36,10 @@ python train.py --experiment mbv2   \
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
-               --transformer_expansion_rate 2 \
+               --transformer_expansion_rate 6 \
                --solver_ver 4       \
                --batch_norm         \
-               --maxdepth 5       \
+               --maxdepth 8       \
                --batch-size 64   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
