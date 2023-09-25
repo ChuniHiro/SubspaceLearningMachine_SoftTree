@@ -22,14 +22,14 @@
 #                --visualise_split 
 
 python train.py --dataset mnist \
-               --experiment mbv2 \
+               --experiment mbv2light \
                --subexperiment  run0 \
-               --lr 0.0002 \
+               --lr 0.001 \
                --batch-size 64  \
                --epochs_patience 20\
-               --epochs_node 100 \
-	           --epochs_finetune 200\
-               -t_ver_root 9 \
+               --epochs_node 50 \
+	           --epochs_finetune 100\
+               -t_ver_root 10 \
                -t_ver 1 -t_ngf 64 -t_k 3\
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
