@@ -30,7 +30,7 @@
 
 
 python train.py --experiment mbv2   \
-               --subexperiment run0 \
+               --subexperiment run0_widthmult_1.0 \
                --dataset cifar100   \
                --lr 0.001 \
                --router_ver 4      \
@@ -38,6 +38,7 @@ python train.py --experiment mbv2   \
                --router_k 3        \
                --router_dropout_prob 0.2 \
                --transformer_ver_root 9\
+               --transformer_width_mult 1.0 \
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \

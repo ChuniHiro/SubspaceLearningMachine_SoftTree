@@ -65,7 +65,7 @@ parser.add_argument('--transformer_ngf', '-t_ngf', dest='transformer_ngf', type=
 parser.add_argument('--transformer_k', '-t_k', dest='transformer_k', type=int, default=5, help='kernel size in transfomer function')
 parser.add_argument('--transformer_expansion_rate', '-t_expr', dest='transformer_expansion_rate', type=int, default=3, help='default transformer expansion rate')
 parser.add_argument('--transformer_reduction_rate', '-t_redr', dest='transformer_reduction_rate', type=int, default=2, help='default transformer reduction rate')
-parser.add_argument('--transformer-width-mult', '-t_wm', dest='transformer_width_mult', type=float, default=1.0, help='default transformer width multiplier')
+parser.add_argument('--transformer_width_mult', '-t_wm', dest='transformer_width_mult', type=float, default=1.0, help='default transformer width multiplier')
 
 parser.add_argument('--solver_ver', '-s_ver', dest='solver_ver', type=int, default=1, help='default router version')
 parser.add_argument('--solver_inherit', '-s_inh', dest='solver_inherit',  action='store_true', help='inherit the parameters of the solver when defining two new ones for splitting a node')
