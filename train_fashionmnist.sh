@@ -104,13 +104,13 @@ python train.py --dataset fashion_mnist \
                --experiment mbv2light \
                --subexperiment  run0_width_0.5 \
                --lr 0.001 \
-               --batch-size 64  \
+               --batch-size 256  \
                --epochs_patience 20\
                --epochs_node 20 \
-	           --epochs_finetune 20\
+	           --epochs_finetune 100\
                -t_ver_root 10 \
                -t_ver 1 -t_ngf 64 -t_k 3\
-               -transformer_expansion_rate 6 \
+               --transformer_expansion_rate 6 \
                -t_wm 0.5 \
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \

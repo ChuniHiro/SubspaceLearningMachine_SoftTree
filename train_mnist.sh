@@ -47,7 +47,7 @@ python train.py --dataset mnist \
                --batch-size 64  \
                --epochs_patience 20\
                --epochs_node 20 \
-	           --epochs_finetune 20\
+	           --epochs_finetune 100\
                -t_ver_root 10 \
                -t_ver 1 -t_ngf 64 -t_k 3\
                -t_wm 0.5 \
