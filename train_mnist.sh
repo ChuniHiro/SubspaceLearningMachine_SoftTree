@@ -21,9 +21,28 @@
 #                --num_workers 0    \
 #                --visualise_split 
 
+# python train.py --dataset mnist \
+#                --experiment mbv2light \
+#                --subexperiment  run1_width_0.2 \
+#                --lr 0.001 \
+#                --batch-size 64  \
+#                --epochs_patience 20\
+#                --epochs_node 20 \
+# 	           --epochs_finetune 20\
+#                -t_ver_root 10 \
+#                -t_ver 1 -t_ngf 64 -t_k 3\
+#                -t_wm 0.2 \
+#                -r_ver 4 -r_ngf 64 -r_k 3 \
+#                -s_ver 4 \
+#                -ds_int 1 \
+#                --maxdepth 5 \
+#                --visualize_split --num_workers 0\
+#                --seed 0\
+#                --augmentation_on
+
 python train.py --dataset mnist \
                --experiment mbv2light \
-               --subexperiment  run1_width_0.2 \
+               --subexperiment  run1_width_0.5 \
                --lr 0.001 \
                --batch-size 64  \
                --epochs_patience 20\
@@ -31,11 +50,11 @@ python train.py --dataset mnist \
 	           --epochs_finetune 20\
                -t_ver_root 10 \
                -t_ver 1 -t_ngf 64 -t_k 3\
-               -t_wm 0.2 \
+               -t_wm 0.5 \
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
-               --maxdepth 5 \
+               --maxdepth 1 \
                --visualize_split --num_workers 0\
                --seed 0\
                --augmentation_on

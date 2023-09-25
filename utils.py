@@ -80,8 +80,9 @@ def define_node(
                 'ngf': args.transformer_ngf[level],
                 'batch_norm': args.batch_norm,
                 'downsample': meta['downsampled'],
-                'expansion_rate': 1,
-                'reduction_rate': 2,
+                'width_mult': args.transformer_width_mult,
+                'expansion_rate': args.transformer_expansion_rate,
+                'reduction_rate': args.transformer_reduction_rate,
                 'stride' : 2
                 }
         # transformer_ver = 2 # convolution

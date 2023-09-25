@@ -869,7 +869,7 @@ class Edge_MBV2(nn.Module):
 
 class Root_MBV2(nn.Module):
 
-    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, expansion width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
         super(Root_MBV2, self).__init__()
         block = InvertedResidual
         input_channel = input_nc
@@ -951,18 +951,20 @@ class Root_MBV2(nn.Module):
 
 class Root_MBV2light(nn.Module):
 
-    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32,  expansion_rate = 6, **kwargs):
         super(Root_MBV2light, self).__init__()
         block = InvertedResidual
         input_channel = input_nc
         
+        print("check width mult", width_mult)
         interverted_residual_setting = [
+            # t, c, n, s
             [1, 16, 1, 1],
-            [6, 24, 2, 2],
-            [6, 32, 2, 2],
-            [6, 64, 3, 2],
-            [6, 96, 2, 1],
-            [6, 160, 2, 2],
+            [expansion_rate, 24, 2, 2],
+            [expansion_rate, 32, 2, 2],
+            [expansion_rate, 64, 3, 2],
+            [expansion_rate, 96, 2, 1],
+            [expansion_rate, 160, 2, 2],
         ]
 
         self.features = []
