@@ -1,7 +1,8 @@
 """Utility functions"""
 import torch
 import torchvision
-import json
+# import json
+import pickle
 import time
 import models
 import random
@@ -238,7 +239,7 @@ def get_scheduler(scheduler_type, optimizer, grow):
 def imshow(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-
+    plt.show()
 
 def plot_hist(data, save_as='./figure'):
     fig = plt.figure()
@@ -265,7 +266,8 @@ def plot_hist_root(labels, split_status, save_as='./figures/hist_labels_split.pn
 def print_performance(jasonfile, model_name='model_1', figsize=(5,5)) :
     """ Inspect performance of a single model
     """
-    records = json.load(open(jasonfile, 'r'))
+    # records = json.load(open(jasonfile, 'r'))
+    records = pickle.load(open(jasonfile, 'rb'))
     print('\n'+model_name)
     print("        train_best_loss: {}".format(records['train_best_loss']))
     print("        valid_best_loss: {}".format(records['valid_best_loss']))
@@ -280,7 +282,7 @@ def print_performance(jasonfile, model_name='model_1', figsize=(5,5)) :
     plt.legend(loc='upper right')
     plt.ylabel('epoch wise loss (average CE loss)')
     plt.xlabel('epoch number')
-    
+    plt.show()
 
 def plot_performance(jasonfiles, model_names=[], figsize=(5,5), title='') :
     """ Visualise the results for several models
@@ -298,7 +300,8 @@ def plot_performance(jasonfiles, model_names=[], figsize=(5,5), title='') :
 
     for i, f in enumerate(jasonfiles):
         # load the information: 
-        records = json.load(open(f, 'r'))
+        # records = json.load(open(f, 'r'))
+        records = pickle.load(open(f, 'rb'))
         
         # Plot train/test loss
         plt.plot(np.arange(len(records['test_epoch_loss'])), np.array(records['test_epoch_loss']),
@@ -309,7 +312,7 @@ def plot_performance(jasonfiles, model_names=[], figsize=(5,5), title='') :
     plt.xlabel('epoch number')
     plt.legend(loc='upper right')
     plt.title(title)
-
+    plt.show()
 
 def plot_accuracy(jasonfiles, model_names=[], figsize=(5,5), ymax=100.0, title=''):
     fig = plt.figure(figsize=figsize)
@@ -320,7 +323,8 @@ def plot_accuracy(jasonfiles, model_names=[], figsize=(5,5), ymax=100.0, title='
 
     for i, f in enumerate(jasonfiles):
         # load the information: 
-        records = json.load(open(f, 'r'))
+        # records = json.load(open(f, 'r'))
+        records = pickle.load(open(f, 'rb'))
         
         # Plot train/test loss
         plt.plot(
@@ -335,7 +339,7 @@ def plot_accuracy(jasonfiles, model_names=[], figsize=(5,5), ymax=100.0, title='
         print(model_names[i] + ': accuracy = {}'.format(max(records['test_epoch_accuracy'])))
     plt.legend(loc='lower right')
     plt.title(title)
-
+    plt.show()
 
 def compute_error(model_file, data_loader, cuda_on=False, name = ''):
     """Load a model and compute errors on a held-out dataset

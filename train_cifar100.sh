@@ -32,12 +32,12 @@
 python train.py --experiment mbv2   \
                --subexperiment run0 \
                --dataset cifar100   \
-               --lr 0.0001 \
+               --lr 0.001 \
                --router_ver 4      \
                --router_ngf 64     \
                --router_k 3        \
                --router_dropout_prob 0.2 \
-               --transformer_ver_root 10\
+               --transformer_ver_root 9\
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
