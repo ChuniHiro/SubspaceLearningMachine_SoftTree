@@ -279,7 +279,10 @@ def get_dataloaders(
             **kwargs)
         
     elif dataset == 'tiny-imagenet':
-
+        
+        # imagenet standard
+        # IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
+        # IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
         if augmentation_on:
             transform_train = transforms.Compose(
                 [
@@ -288,7 +291,7 @@ def get_dataloaders(
                     transforms.RandomHorizontalFlip(0.5),
                     transforms.ToTensor(),
                     transforms.Normalize(
-                        (0.4802, 0.4481, 0.3975), (0.2302, 0.2265, 0.2262),
+                        (0.485, 0.456, 0.406), (0.229, 0.224, 0.225),
                     ),
                 ],
             )
@@ -296,7 +299,7 @@ def get_dataloaders(
                 [
                     transforms.ToTensor(),
                     transforms.Normalize(
-                        (0.4802, 0.4481, 0.3975), (0.2302, 0.2265, 0.2262),
+                        (0.485, 0.456, 0.406), (0.229, 0.224, 0.225),
                     ),
                 ],
             )
@@ -304,13 +307,13 @@ def get_dataloaders(
             transform_train = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.4802, 0.4481, 0.3975), (0.2302, 0.2265, 0.2262),),
+                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225),),
                 ],
             )
             transform_test = transforms.Compose(
                 [
                     transforms.ToTensor(),
-                    transforms.Normalize((0.4802, 0.4481, 0.3975), (0.2302, 0.2265, 0.2262),),
+                    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225),),
                 ],
             )
 

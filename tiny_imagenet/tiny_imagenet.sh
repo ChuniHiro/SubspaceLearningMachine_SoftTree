@@ -4,3 +4,4 @@ unzip tiny-imagenet-200.zip
 rm -r ./tiny-imagenet-200/test
 python3 val_format.py
 find . -name "*.txt" -delete
+rm tiny-imagenet-200.zip
