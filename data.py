@@ -335,24 +335,30 @@ def get_dataloaders(
         # data_dir = "../data/tiny-imagenet-200/"
         data_dir = "./tiny_imagenet/tiny-imagenet-200/"
         tiny_imagenet_train = datasets.ImageFolder(os.path.join(data_dir, 'train'),transform=transform_train) 
-        tiny_imagenet_val = datasets.ImageFolder(os.path.join(data_dir, 'train'),transform=transform_test)
+        # tiny_imagenet_val = datasets.ImageFolder(os.path.join(data_dir, 'train'),transform=transform_test)
+        
         # tiny_imagenet_test = datasets.ImageFolder(os.path.join(data_dir, 'test'),transform=transform_test)
         # tiny_imagenet_val = datasets.ImageFolder(os.path.join(data_dir, 'val'),transform=transform_test)
         tiny_imagenet_test = datasets.ImageFolder(os.path.join(data_dir, 'val'),transform=transform_test)
 
         TOTAL_NUM = 100000
-        NUM_VALID = int(round(TOTAL_NUM * 0.1))
+        NUM_VALID = int(round(TOTAL_NUM * 0.05))
         NUM_TRAIN = int(round(TOTAL_NUM - NUM_VALID))
 
         train_loader = torch.utils.data.DataLoader(
             tiny_imagenet_train,
             batch_size=batch_size,
-            sampler=ChunkSampler(NUM_TRAIN, 0, shuffle=True),
+            # sampler=ChunkSampler(NUM_TRAIN, 0, shuffle=True),
             **kwargs)
+        # valid_loader = torch.utils.data.DataLoader(
+        #     tiny_imagenet_train,
+        #     batch_size=batch_size,
+        #     sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
+        #     **kwargs)
         valid_loader = torch.utils.data.DataLoader(
-            tiny_imagenet_val,
+            tiny_imagenet_test,
             batch_size=batch_size,
-            sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
+            # sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
             **kwargs)
         test_loader = torch.utils.data.DataLoader(
             tiny_imagenet_test,
