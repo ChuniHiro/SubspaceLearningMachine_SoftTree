@@ -106,7 +106,7 @@
                
 
 python train.py --experiment mbv2    \
-               --subexperiment run1_with_0.8_expansion_4 \
+               --subexperiment run1_with_1.4_expansion_8 \
                --dataset cifar10   \
                --lr 0.001 \
                --router_ver 4      \
@@ -116,8 +116,8 @@ python train.py --experiment mbv2    \
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
-               --transformer_expansion_rate 4 \
-               --transformer_width_mult 0.8 \
+               --transformer_expansion_rate 8 \
+               --transformer_width_mult 1.4 \
                --solver_ver 4       \
                --batch_norm         \
                --maxdepth 6       \
