@@ -7,3 +7,4 @@ train_cifar*
 train_mnist*
 train_tiny*
 train_fashion*
+debug*

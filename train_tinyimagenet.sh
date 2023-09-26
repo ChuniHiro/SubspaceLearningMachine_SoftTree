@@ -26,7 +26,7 @@
                
 
 python train.py --experiment mbv2   \
-               --subexperiment run0 \
+               --subexperiment run0_width_1.4_t_6 \
                --dataset tiny-imagenet   \
                --lr 0.001 \
                --router_ver 4      \
@@ -37,10 +37,11 @@ python train.py --experiment mbv2   \
                --transformer_ngf 64  \
                --transformer_k 3     \
                --transformer_expansion_rate 6 \
+               --transformer_width_mult 1.4 \
                --solver_ver 4       \
                --batch_norm         \
                --maxdepth 8       \
-               --batch-size 64   \
+               --batch-size 32   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
                --epochs_patience 50 \
