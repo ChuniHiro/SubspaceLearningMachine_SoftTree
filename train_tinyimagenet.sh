@@ -40,12 +40,12 @@ python train.py --experiment mbv2   \
                --solver_ver 4       \
                --batch_norm         \
                --maxdepth 8       \
-               --batch-size 64   \
+               --batch-size 128   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
                --epochs_patience 50 \
-               --epochs_node 1  \
-               --epochs_finetune 1 \
+               --epochs_node 100  \
+               --epochs_finetune 200 \
                --seed 0    \
                --num_workers 0 \
                --finetune_during_growth \

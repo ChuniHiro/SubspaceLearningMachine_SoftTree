@@ -30,7 +30,7 @@
 
 
 python train.py --experiment mbv2   \
-               --subexperiment run0_widthmult_1.0 \
+               --subexperiment run0_widthmult_1.4_expansion_8 \
                --dataset cifar100   \
                --lr 0.001 \
                --router_ver 4      \
@@ -38,20 +38,20 @@ python train.py --experiment mbv2   \
                --router_k 3        \
                --router_dropout_prob 0.2 \
                --transformer_ver_root 9\
-               --transformer_width_mult 1.0 \
+               --transformer_width_mult 1.4 \
                --transformer_ver 1   \
                --transformer_ngf 64  \
                --transformer_k 3     \
-               --transformer_expansion_rate 2 \
+               --transformer_expansion_rate 8 \
                --solver_ver 4       \
                --solver_dropout_prob 0.2 \
                --batch_norm         \
                --maxdepth 8       \
-               --batch-size 512   \
+               --batch-size 256   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
                --epochs_patience 50 \
-               --epochs_node 200  \
+               --epochs_node 100  \
                --epochs_finetune 200 \
                --seed 0    \
                --num_workers 0 \
