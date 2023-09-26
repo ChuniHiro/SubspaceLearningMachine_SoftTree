@@ -1015,6 +1015,71 @@ class Root_MBV2light(nn.Module):
             requires_grad=False)
         return self.forward(x).size()
 
+class Root_MBV2tiny(nn.Module):
+
+    def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32,  expansion_rate = 6, **kwargs):
+        super(Root_MBV2tiny, self).__init__()
+        block = InvertedResidual
+        input_channel = input_nc
+        
+        print("check width mult", width_mult)
+        interverted_residual_setting = [
+            # t, c, n, s
+            [1, 16, 1, 1],
+            [expansion_rate, 32, 2, 2],
+            [expansion_rate, 64, 2, 2],
+            [expansion_rate, 96, 2, 2],
+            [expansion_rate, 160, 1, 2],
+        ]
+
+        self.features = []
+        # building inverted residual blocks
+        for t, c, n, s in interverted_residual_setting:
+            output_channel = make_divisible(c * width_mult) if t > 1 else c
+            for i in range(n):
+                if i == 0:
+                    self.features.append(block(input_channel, output_channel, s, expand_ratio=t))
+                else:
+                    self.features.append(block(input_channel, output_channel, 1, expand_ratio=t))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        self.features = nn.Sequential(*self.features)
+
+        # print("chekc MBv2 model")
+        # print(self.features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+        self._initialize_weights()
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                n = m.weight.size(1)
+                m.weight.data.normal_(0, 0.01)
+                m.bias.data.zero_()
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the edger to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
 class Root_MobileNetV3(nn.Module):
     def __init__(self, input_nc, input_width, input_height, mode='small', num_classes=10, width_mult=1., **kwargs):
         super(Root_MobileNetV3, self).__init__()

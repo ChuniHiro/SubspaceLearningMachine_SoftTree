@@ -41,17 +41,17 @@
 #                --augmentation_on
 
 python train.py --dataset mnist \
-               --experiment mbv2light \
-               --subexperiment  run1_width_0.5_expand_4 \
+               --experiment mbv2tiny \
+               --subexperiment  run0_width_0.5_expand_4 \
                --lr 0.001 \
                --batch-size 64  \
                --epochs_patience 20\
                --epochs_node 20 \
 	           --epochs_finetune 100\
-               -t_ver_root 10 \
+               -t_ver_root 11 \
                -t_ver 1 -t_ngf 64 -t_k 3\
                -t_wm 0.5 \
-               -transformer_expansion_rate 4 \
+               --transformer_expansion_rate 4 \
                -r_ver 4 -r_ngf 64 -r_k 3 \
                -s_ver 4 \
                -ds_int 1 \
