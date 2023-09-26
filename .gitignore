@@ -3,3 +3,7 @@
 __pycache__/*
 /tiny_imagenet/tiny-imagenet-200/*
 /data/*
+train_cifar*
+train_mnist*
+train_tiny*
+train_fashion*

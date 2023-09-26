@@ -80,8 +80,9 @@ def define_node(
                 'ngf': args.transformer_ngf[level],
                 'batch_norm': args.batch_norm,
                 'downsample': meta['downsampled'],
-                'expansion_rate': 1,
-                'reduction_rate': 2,
+                'width_mult': args.transformer_width_mult,
+                'expansion_rate': args.transformer_expansion_rate,
+                'reduction_rate': args.transformer_reduction_rate,
                 'stride' : 2
                 }
         # transformer_ver = 2 # convolution
@@ -159,7 +160,8 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         7: models.Edge_MBVIT, # ViT
         8: models.Root_MobileNetV3, # mbv3
         9: models.Root_MBV2, # mbv2
-        10: models.Root_MBV2light, # mbv2 lighter version
+        10: models.Root_MBV2light, # mbv2 light version
+        11: models.Root_MBV2tiny, # mbv2 tiny version
     }
     if version not in version_dict.keys():
 
