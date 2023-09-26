@@ -3,7 +3,9 @@
 __pycache__/*
 /tiny_imagenet/tiny-imagenet-200/*
 /data/*
-train_cifar*
-train_mnist*
-train_tiny*
+train_cifar10.sh
+train_cifar100.sh
+train_mnist.sh
+train_tiny_imagenet.sh
+train_fashionmnist.sh
 train_fashion*
