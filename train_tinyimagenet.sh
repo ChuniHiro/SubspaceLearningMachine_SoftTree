@@ -40,7 +40,7 @@ python train.py --experiment mbv2   \
                --solver_ver 4       \
                --batch_norm         \
                --maxdepth 8       \
-               --batch-size 64   \
+               --batch-size 128   \
                --scheduler step_lr  \
                --criteria avg_valid_loss  \
                --epochs_patience 50 \
