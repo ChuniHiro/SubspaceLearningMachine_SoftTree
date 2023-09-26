@@ -807,7 +807,6 @@ class Edge_MBV2(nn.Module):
     def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32, expansion_rate = 2, **kwargs):
         super(Edge_MBV2, self).__init__()
         block = InvertedResidual
-        input_channel = input_nc
 
         interverted_residual_setting = [
             # t, c, n, s
@@ -872,7 +871,6 @@ class Root_MBV2(nn.Module):
     def __init__(self, input_nc, input_width, input_height, num_classes = 10, expansion_rate = 6, width_mult = 1.0,stride = 1, ngf = 32, **kwargs):
         super(Root_MBV2, self).__init__()
         block = InvertedResidual
-        input_channel = input_nc
 
         # interverted_residual_setting = [
         #     # standard setting for mobilev2
@@ -901,7 +899,8 @@ class Root_MBV2(nn.Module):
         # print("check settings")
         # print(interverted_residual_setting)
 
-        self.features = []
+        input_channel = make_divisible(16 * width_mult, 8)
+        self.features = [conv_3x3_bn(input_nc, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:
             output_channel = make_divisible(c * width_mult) if t > 1 else c
@@ -954,7 +953,6 @@ class Root_MBV2light(nn.Module):
     def __init__(self, input_nc, input_width, input_height, num_classes = 10, width_mult = 1.0,stride = 1, ngf = 32,  expansion_rate = 6, **kwargs):
         super(Root_MBV2light, self).__init__()
         block = InvertedResidual
-        input_channel = input_nc
         
         print("check width mult", width_mult)
         interverted_residual_setting = [
@@ -967,7 +965,8 @@ class Root_MBV2light(nn.Module):
             [expansion_rate, 160, 2, 2],
         ]
 
-        self.features = []
+        input_channel = make_divisible(16 * width_mult, 8)
+        self.features = [conv_3x3_bn(input_nc, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:
             output_channel = make_divisible(c * width_mult) if t > 1 else c
@@ -1032,7 +1031,8 @@ class Root_MBV2tiny(nn.Module):
             [expansion_rate, 160, 1, 2],
         ]
 
-        self.features = []
+        input_channel = make_divisible(16 * width_mult, 8)
+        self.features = [conv_3x3_bn(input_nc, input_channel, 2)]
         # building inverted residual blocks
         for t, c, n, s in interverted_residual_setting:
             output_channel = make_divisible(c * width_mult) if t > 1 else c
