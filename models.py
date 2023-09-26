@@ -890,7 +890,7 @@ class Root_MBV2(nn.Module):
             [1, 16, 1, 1],
             [expansion_rate, 24, 2, 2],
             [expansion_rate, 32, 3, 2],
-            [expansion_rate, 64, 4, 2],
+            [expansion_rate, 64, 3, 2],
             [expansion_rate, 96, 3, 1],
             [expansion_rate, 160, 3, 2],
             [expansion_rate, 320, 1, 1],
@@ -944,7 +944,7 @@ class Root_MBV2(nn.Module):
         """
         dtype = torch.FloatTensor
         x = Variable(
-            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            torch.randn(2, input_nc, input_width, input_height).type(dtype),
             requires_grad=False)
         return self.forward(x).size()
 
@@ -1010,7 +1010,7 @@ class Root_MBV2light(nn.Module):
         """
         dtype = torch.FloatTensor
         x = Variable(
-            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            torch.randn(2, input_nc, input_width, input_height).type(dtype),
             requires_grad=False)
         return self.forward(x).size()
 
@@ -1076,7 +1076,7 @@ class Root_MBV2tiny(nn.Module):
         """
         dtype = torch.FloatTensor
         x = Variable(
-            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            torch.randn(2, input_nc, input_width, input_height).type(dtype),
             requires_grad=False)
         return self.forward(x).size()
 

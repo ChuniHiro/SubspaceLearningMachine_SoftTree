@@ -26,7 +26,7 @@
                
 
 python train.py --experiment mbv2   \
-               --subexperiment run0_width_1.4_t_6 \
+               --subexperiment run0_width_1.4_t_6git  \
                --dataset tiny-imagenet   \
                --lr 0.001 \
                --router_ver 4      \
