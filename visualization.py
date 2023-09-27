@@ -364,7 +364,7 @@ def plot_performance(recordfiles, model_names=[], ymin=0.0, ymax=1.0, figsize=(5
 
 def plot_accuracy(
         recordfiles, model_names=[],
-        figsize=(5,5), ymin=0.0, ymax=100.0, title='',
+        figsize=(5,5), ymin=0.0, ymax=110.0, title='',
         finetune_position=False, color=None):
     """Plot test accuracy (%) for multiple models on the same axis. """
     fig = plt.figure(figsize=figsize)
@@ -391,7 +391,8 @@ def plot_accuracy(
 
         # choose est based on validation accuracy
         best_epoch_acc = records['valid_epoch_accuracy'].index(max(records['valid_epoch_accuracy']))
-        print(model_names[i] + ': test accuracy = {}'.format(records['test_epoch_accuracy'][best_epoch_acc]))
+        # print(model_names[i] + ': test accuracy = {}'.format(records['test_epoch_accuracy'][best_epoch_acc]))
+        print(model_names[i] + ': test accuracy = {}'.format(records['test_best_accuracy']))
         if finetune_position:
             plt.axvline(x=len(records['valid_epoch_loss'])-records['epochs_finetune'], color=color[i], linestyle='--')
     plt.legend(loc='lower right', fontsize=13)

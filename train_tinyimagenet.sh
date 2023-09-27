@@ -80,9 +80,9 @@
 #                --num-classes 200 
 
 python train.py --experiment mbv2   \
-               --subexperiment run0_width_1.4_t_6  \
+               --subexperiment run0_width_2_t_8  \
                --dataset tiny-imagenet   \
-               --lr 0.01 \
+               --lr 0.0005 \
                --router_ver 4      \
                --router_ngf 64     \
                --router_k 3        \
@@ -90,8 +90,8 @@ python train.py --experiment mbv2   \
                --transformer_ver 2   \
                --transformer_ngf 64  \
                --transformer_k 3     \
-               --transformer_expansion_rate 6 \
-               --transformer_width_mult 1.4 \
+               --transformer_expansion_rate 8 \
+               --transformer_width_mult 2.0 \
                --solver_ver 4       \
                --batch_norm         \
                --maxdepth 8       \
