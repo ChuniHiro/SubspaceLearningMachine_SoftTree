@@ -337,41 +337,46 @@ def get_dataloaders(
 
         # data_dir = "../data/tiny-imagenet-200/"
         data_dir = "./tiny_imagenet/tiny-imagenet-200/"
-        tiny_imagenet_train = datasets.ImageFolder(os.path.join(data_dir, 'train'),transform=transform_train) 
+        tiny_imagenet_train = datasets.ImageFolder(os.path.join(data_dir, 'train/'),transform=transform_train) 
         # tiny_imagenet_val = datasets.ImageFolder(os.path.join(data_dir, 'train'),transform=transform_test)
         
         # tiny_imagenet_test = datasets.ImageFolder(os.path.join(data_dir, 'test'),transform=transform_test)
         # tiny_imagenet_val = datasets.ImageFolder(os.path.join(data_dir, 'val'),transform=transform_test)
-        tiny_imagenet_test = datasets.ImageFolder(os.path.join(data_dir, 'val'),transform=transform_test)
+        tiny_imagenet_test = datasets.ImageFolder(os.path.join(data_dir, 'val/'),transform=transform_test)
 
-        TOTAL_NUM = 100000
-        NUM_VALID = int(round(TOTAL_NUM * 0.05))
-        NUM_TRAIN = int(round(TOTAL_NUM - NUM_VALID))
+        print("Training")
+        print(f'Number of images: {len(tiny_imagenet_train)}')
+        print(f'Number of classes: {len(tiny_imagenet_train.classes)}')
+        print("Validation")
+        print(f'Number of images: {len(tiny_imagenet_test)}')
+        print(f'Number of classes: {len(tiny_imagenet_test.classes)}')
 
-        train_loader = torch.utils.data.DataLoader(
-            tiny_imagenet_train,
-            batch_size=batch_size,
-            # sampler=ChunkSampler(NUM_TRAIN, 0, shuffle=True),
-            **kwargs)
+        # TOTAL_NUM = 100000
+        # NUM_VALID = int(round(TOTAL_NUM * 0.05))
+        # NUM_TRAIN = int(round(TOTAL_NUM - NUM_VALID))
+
+        # train_loader = torch.utils.data.DataLoader(
+        #     tiny_imagenet_train,
+        #     batch_size=batch_size,
+        #     sampler=ChunkSampler(NUM_TRAIN, 0, shuffle=True),
+        #     **kwargs)
         # valid_loader = torch.utils.data.DataLoader(
         #     tiny_imagenet_train,
         #     batch_size=batch_size,
         #     sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
         #     **kwargs)
-        valid_loader = torch.utils.data.DataLoader(
-            tiny_imagenet_test,
-            batch_size=batch_size,
-            # sampler=ChunkSampler(NUM_VALID, NUM_TRAIN, shuffle=True),
-            **kwargs)
-        test_loader = torch.utils.data.DataLoader(
-            tiny_imagenet_test,
-            batch_size=batch_size,
-            shuffle=False,
-            **kwargs)
+        # test_loader = torch.utils.data.DataLoader(
+        #     tiny_imagenet_test,
+        #     batch_size=batch_size,
+        #     shuffle=False,
+        #     **kwargs)
 
-        # train_loader = torch.utils.data.DataLoader(tiny_imagenet_train, batch_size=batch_size, shuffle=True)
-        # valid_loader = torch.utils.data.DataLoader(tiny_imagenet_val, batch_size=batch_size)
-        # test_loader = torch.utils.data.DataLoader(tiny_imagenet_test, batch_size=1000, shuffle=False)
+        NUM_VALID = 100000
+        NUM_TRAIN = 10000
+
+        train_loader = torch.utils.data.DataLoader(tiny_imagenet_train, batch_size=batch_size, shuffle=True)
+        valid_loader = torch.utils.data.DataLoader(tiny_imagenet_test, batch_size=batch_size, shuffle=False)
+        test_loader = torch.utils.data.DataLoader(tiny_imagenet_test, batch_size=batch_size, shuffle=False)
         
     else:
         raise NotImplementedError("Specified data set is not available.")
