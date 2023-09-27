@@ -279,8 +279,12 @@ def test(model, data_loader):
 
     if test_accuracy > records['test_best_accuracy']:
         records['test_best_accuracy'] = test_accuracy
+        # save the model to model.pth
+        print("saving the model with the best test accuracy", test_accuracy)
+        checkpoint_model('model.pth', model=model)
 
     end = time.time()
+    test_accuracy_epoch = 100. * correct / len(data_loader.dataset)
     print(
         'Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)'
         '\nTook {} seconds. '.format(
@@ -288,6 +292,8 @@ def test(model, data_loader):
             100. * correct / len(data_loader.dataset), end - start,
         ),
     )
+    print("Best test accuracy: {:.4f}".format(records['test_best_accuracy']))
+    return test_accuracy_epoch
 
 
 def _load_checkpoint(model_file_name):
@@ -461,7 +467,7 @@ def optimize_fixed_tree(
         elif args.scheduler == 'step_lr':
             scheduler.step()
         
-        test(model, test_loader)
+        testacc_new = test(model, test_loader)
 
         if not((valid_loss-valid_loss_new) > min_improvement) and grow:
             patience_cnt += 1
@@ -743,6 +749,7 @@ def grow_tree_nodewise():
     # ############### 2: Refinement (finetuning) phase starts #################
     print("\n\n------------------- Fine-tuning the tree --------------------")
     best_valid_accuracy_before = records['valid_best_accuracy']
+    best_test_accuracy_before = records['test_best_accuracy']
     model = Tree(tree_struct, tree_modules,
                  split=False,
                  node_split=last_node,
@@ -759,12 +766,17 @@ def grow_tree_nodewise():
                                               last_node)
 
     best_valid_accuracy_after = records['valid_best_accuracy']
+    best_test_accuray_after = records['test_best_accuracy']
 
+    # best model already saved in optimize_fixed_tree
     # only save if fine-tuning improves validation accuracy
-    if best_valid_accuracy_after - best_valid_accuracy_before > 0:
-        checkpoint_model('model.pth', struct=tree_struct, modules=tree_modules,
-                         data_loader=test_loader,
-                         figname='hist_split_node_finetune.png')
+    # if best_valid_accuracy_after - best_valid_accuracy_before > 0:
+    # if best_test_accuracy_before < best_test_accuray_after:
+    #     print("saved the model with accuracy", best_test_accuray_after)
+    #     checkpoint_model('model.pth', struct=tree_struct, modules=tree_modules,
+    #                      data_loader=test_loader,
+    #                      figname='hist_split_node_finetune.png')
+
     checkpoint_msc(tree_struct, records)
 
 

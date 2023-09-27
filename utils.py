@@ -175,43 +175,37 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
 
 def define_router(version, input_nc, input_width, input_height, **kwargs):
     
-    if version == 1:  # Simple router with 1 conv kernel + spatial averaging
-        return models.Router(input_nc, input_width, input_height, **kwargs)
-    elif version == 2:  # 1 conv layer with global average pooling + fc layer
-        return models.RouterGAP(input_nc, input_width, input_height, **kwargs)
-    elif version == 3:  # 2 conv with global average pooling + fc layer
-        return models.RouterGAPwithDoubleConv(input_nc, input_width, input_height, **kwargs)
-    elif version == 4:  # MLP with 1 hidden layer
-        return models.Router_MLP_h1(input_nc, input_width, input_height, **kwargs)
-    elif version == 5:  # GAP + 2 fc layers (Veit. et al 2017)
-        return models.RouterGAP_TwoFClayers(input_nc, input_width, input_height, **kwargs)
-    elif version == 6:  # 1 conv + GAP + 2 fc layers
-        return models.RouterGAPwithConv_TwoFClayers(input_nc, input_width, input_height, **kwargs)
-    elif version == 7:  # MLP with 2 hidden layer
-        return models.Router_MLP_h2(input_nc, input_width, input_height, **kwargs)
-    elif version == 8:  # 1 reverse residual conv + GAP + 2 fc layers
-        return models.InnerGAPwithMBv2Conv_TwoFClayers(input_nc, input_width, input_height, **kwargs)
+    version_dict = {
+        1: models.Router, # Simple router with 1 conv kernel + spatial averaging
+        2: models.RouterGAP, # 1 conv layer with global average pooling + fc layer
+        3: models.RouterGAPwithDoubleConv, # 2 conv with global average pooling + fc layer
+        4: models.Router_MLP_h1, # MLP with 1 hidden layer
+        5: models.RouterGAP_TwoFClayers, # GAP + 2 fc layers (Veit. et al 2017)
+        6: models.RouterGAPwithConv_TwoFClayers, # 1 conv + GAP + 2 fc layers
+        7: models.Router_MLP_h2, # MLP with 2 hidden layer
+        8: models.InnerGAPwithMBv2Conv_TwoFClayers, # 1 reverse residual conv + GAP + 2 fc layers
+    }
+    if version not in version_dict.keys():
+        raise NotImplementedError("Specified router module not available.")
     else:
-        raise NotImplementedError("Specified router module not available!")
+        return version_dict[version](input_nc, input_width, input_height, **kwargs)
 
 
 def define_solver(version, input_nc, input_width, input_height, **kwargs):
-    if version == 1:  # Logistric regressor
-        return models.LR(input_nc, input_width, input_height, **kwargs)
-    elif version == 2:  # MLP with 2 hidden layers:
-        return models.MLP_LeNet(input_nc, input_width, input_height, **kwargs)
-    elif version == 3:  # MLP with a single hidden layer (MNIST LeNet)
-        return models.MLP_LeNetMNIST(input_nc, input_width, input_height, **kwargs)
-    elif version == 4:  # GAP + 2 FC layers
-        return models.Solver_GAP_TwoFClayers(input_nc, input_width, input_height, **kwargs)
-    elif version == 5:  # MLP with a single hidden layer in AlexNet
-        return models.MLP_AlexNet(input_nc, input_width, input_height, **kwargs)
-    elif version == 6:  # GAP + 1 FC layer
-        return models.Solver_GAP_OneFClayers(input_nc, input_width, input_height, **kwargs)
-    elif version == 7:
-        return models.Child_MBV2GAP(input_nc, input_width, input_height,  **kwargs)
+
+    version_dict = {
+        1: models.LR, # Logistric regressor
+        2: models.MLP_LeNet, # MLP with 2 hidden layers:
+        3: models.MLP_LeNetMNIST, # MLP with a single hidden layer (MNIST LeNet)
+        4: models.Solver_GAP_TwoFClayers, # GAP + 2 FC layers
+        5: models.MLP_AlexNet, # MLP with a single hidden layer in AlexNet
+        6: models.Solver_GAP_OneFClayers, # GAP + 1 FC layer
+        7: models.Child_MBV2GAP, # mbv2
+    }
+    if version not in version_dict.keys():
+        raise NotImplementedError("Specified solver module not available.")
     else:
-        raise NotImplementedError("Specified solver module not available!")
+        return version_dict[version](input_nc, input_width, input_height, **kwargs)
 
 
 def get_scheduler(scheduler_type, optimizer, grow):
