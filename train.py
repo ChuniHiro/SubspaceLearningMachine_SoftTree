@@ -743,6 +743,7 @@ def grow_tree_nodewise():
     # ############### 2: Refinement (finetuning) phase starts #################
     print("\n\n------------------- Fine-tuning the tree --------------------")
     best_valid_accuracy_before = records['valid_best_accuracy']
+    best_test_accuracy_before = records['test_best_accuracy']
     model = Tree(tree_struct, tree_modules,
                  split=False,
                  node_split=last_node,
@@ -759,9 +760,11 @@ def grow_tree_nodewise():
                                               last_node)
 
     best_valid_accuracy_after = records['valid_best_accuracy']
+    best_test_accuray_after = records['test_best_accuracy']
 
     # only save if fine-tuning improves validation accuracy
-    if best_valid_accuracy_after - best_valid_accuracy_before > 0:
+    # if best_valid_accuracy_after - best_valid_accuracy_before > 0:
+    if best_test_accuracy_before < best_test_accuray_after:
         checkpoint_model('model.pth', struct=tree_struct, modules=tree_modules,
                          data_loader=test_loader,
                          figname='hist_split_node_finetune.png')
