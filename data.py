@@ -5,6 +5,7 @@ from torchvision import datasets, transforms
 from ops import ChunkSampler
 import os
 import numpy as np
+from torchvision.transforms import AutoAugment, AutoAugmentPolicy
 
 def get_dataloaders(
         dataset='mnist',
@@ -132,6 +133,7 @@ def get_dataloaders(
                 [
                     transforms.RandomCrop(32, padding=4),
                     transforms.RandomHorizontalFlip(0.5),
+                    AutoAugment(AutoAugmentPolicy.CIFAR10),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
@@ -215,6 +217,7 @@ def get_dataloaders(
                 [
                     transforms.RandomCrop(32, padding=4),
                     transforms.RandomHorizontalFlip(0.5),
+                    AutoAugment(AutoAugmentPolicy.CIFAR10),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         # (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010),
@@ -289,6 +292,7 @@ def get_dataloaders(
                     transforms.RandomRotation(20),
                     transforms.RandomCrop(64, padding=16),
                     transforms.RandomHorizontalFlip(0.5),
+                    AutoAugment(AutoAugmentPolicy.IMAGENET),
                     transforms.ToTensor(),
                     transforms.Normalize(
                         (0.485, 0.456, 0.406), (0.229, 0.224, 0.225),
