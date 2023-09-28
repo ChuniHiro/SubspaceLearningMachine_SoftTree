@@ -90,7 +90,7 @@
 #                --augmentation_on
 
 python train.py --experiment mbv2light  \
-               --subexperiment run0_widthmult_1.0_t_6 \
+               --subexperiment run0_widthmult_1.4_t_6 \
                --dataset cifar100   \
                --lr 0.001 \
                --router_ver 4      \
@@ -98,7 +98,7 @@ python train.py --experiment mbv2light  \
                --router_k 3        \
                --router_dropout_prob 0.2 \
                --transformer_ver_root 10\
-               --transformer_width_mult 1.0 \
+               --transformer_width_mult 1.4 \
                --transformer_ver 2   \
                --transformer_ngf 64  \
                --transformer_k 3     \
