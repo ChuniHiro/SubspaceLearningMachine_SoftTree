@@ -10,4 +10,4 @@ __pycache__/*
 /train_fashionmnist.sh
 /train_fashion*
 /debug.ipynb
-/examples/*
+examples/*
