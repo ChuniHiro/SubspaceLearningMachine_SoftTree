@@ -375,8 +375,8 @@ def get_dataloaders(
         #     shuffle=False,
         #     **kwargs)
 
-        NUM_VALID = 100000
-        NUM_TRAIN = 10000
+        NUM_VALID = 10000
+        NUM_TRAIN = 100000
 
         train_loader = torch.utils.data.DataLoader(tiny_imagenet_train, batch_size=batch_size, shuffle=True)
         valid_loader = torch.utils.data.DataLoader(tiny_imagenet_test, batch_size=batch_size, shuffle=False)
