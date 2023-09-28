@@ -105,18 +105,18 @@
 #                --augmentation_on
                
 
-python train.py --experiment mbv2    \
-               --subexperiment run2_with_1.4_expansion_6_autoaug \
+python train.py --experiment mbv2tiny \
+               --subexperiment run0_with_1.4_t_8_autoaug \
                --dataset cifar10   \
                --lr 0.001 \
                --router_ver 4      \
                --router_ngf 64     \
                --router_k 3        \
-               --transformer_ver_root 9\
-               --transformer_ver 1   \
+               --transformer_ver_root 11\
+               --transformer_ver 2   \
                --transformer_ngf 64  \
                --transformer_k 3     \
-               --transformer_expansion_rate 6 \
+               --transformer_expansion_rate 8 \
                --transformer_width_mult 1.4 \
                --solver_ver 4       \
                --batch_norm         \

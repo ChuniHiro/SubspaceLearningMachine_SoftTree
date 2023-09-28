@@ -9,4 +9,4 @@ train_mnist.sh
 train_tinyimagenet.sh
 train_fashionmnist.sh
 train_fashion*
-debug.ipynb
+debug.ipynbgit 
