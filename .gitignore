@@ -1,5 +1,6 @@
 *.pyc
 /experiments/*
+/reference/*
 __pycache__/*
 /tiny_imagenet/tiny-imagenet-200/*
 /data/*
