@@ -1706,13 +1706,21 @@ class Root_SLModelTiny(nn.Module):
         features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
 
         if sand_glass_setting is None:
+            # sand_glass_setting = [
+            #     # t, c,  b, s
+            #     [2, 96,  1, 1],
+            #     [expansion_ratio, 144, 1, 1],
+            #     [expansion_ratio, 192, 3, 2],
+            #     [expansion_ratio, 288, 3, 2],
+            #     [expansion_ratio, 384, 4, 1],
+            # ]
             sand_glass_setting = [
                 # t, c,  b, s
-                [2, 96,  1, 1],
-                [expansion_ratio, 144, 1, 1],
-                [expansion_ratio, 192, 3, 2],
-                [expansion_ratio, 288, 3, 2],
-                [expansion_ratio, 384, 4, 1],
+                [2, 32,  1, 1],
+                [expansion_ratio, 64, 1, 1],
+                [expansion_ratio, 96, 2, 2],
+                [expansion_ratio, 128, 2, 2],
+                [expansion_ratio, 160, 1, 1],
             ]
 
         # only check the first element, assuming user knows t,c,n,s are required
@@ -1783,7 +1791,7 @@ class Edge_SL(nn.Module):
                     padding=(kernel_size - 1) // 2,
                     groups=1,
                     inference_mode=False, # set true after reparam
-                    use_se=self.use_se,
+                    use_se=False,
                     num_conv_branches=1)
         self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
 
