@@ -162,6 +162,9 @@ def define_transformer(version, input_nc, input_width, input_height, **kwargs):
         9: models.Root_MBV2, # mbv2
         10: models.Root_MBV2light, # mbv2 light version
         11: models.Root_MBV2tiny, # mbv2 tiny version
+        12: models.Edge_SL, # SL model for conv
+        13: models.Root_SLModel, # SL model
+        14: models.Root_SLModelTiny, # SL model tiny
     }
     if version not in version_dict.keys():
 

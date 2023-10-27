@@ -9,6 +9,9 @@ from ops import get_leaf_nodes, get_past_leaf_nodes, get_path_to_root
 import numpy as np
 import math
 from einops import rearrange
+from typing import Optional, List, Tuple
+import math
+
 class Tree(nn.Module):
     """ Adaptive Neural Tree module. """
     def __init__(self,
@@ -720,6 +723,8 @@ class SELayer(nn.Module):
         return x * y
 
 
+
+
 class InvertedResidualv3(nn.Module):
     def __init__(self, inp, hidden_dim, oup, kernel_size, stride, use_se, use_hs):
         super(InvertedResidualv3, self).__init__()
@@ -1175,6 +1180,626 @@ class Root_MobileNetV3(nn.Module):
             requires_grad=False)
         return self.forward(x).size()
 
+
+# Subspace learning block
+
+def _make_divisible(v, divisor, min_value=None):
+    """
+    This function is taken from the original tf repo.
+    It ensures that all layers have a channel number that is divisible by 8
+    It can be seen here:
+    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
+    :param v:
+    :param divisor:
+    :param min_value:
+    :return:
+    """
+    if min_value is None:
+        min_value = divisor
+    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+    # Make sure that round down does not go down by more than 10%.
+    if new_v < 0.9 * v:
+        new_v += divisor
+    return new_v
+
+
+class ConvBNReLU(nn.Sequential):
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1, norm_layer=None):
+        padding = (kernel_size - 1) // 2
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        super(ConvBNReLU, self).__init__(
+            nn.Conv2d(in_planes, out_planes, kernel_size, stride, padding, groups=groups, bias=False),
+            norm_layer(out_planes),
+            nn.ReLU6(inplace=True)
+        )
+
+
+
+class SEBlock(nn.Module):
+    """ Squeeze and Excite module.
+
+        Pytorch implementation of `Squeeze-and-Excitation Networks` -
+        https://arxiv.org/pdf/1709.01507.pdf
+    """
+
+    def __init__(self,
+                 in_channels: int,
+                 rd_ratio: float = 0.0625) -> None:
+        """ Construct a Squeeze and Excite Module.
+
+        :param in_channels: Number of input channels.
+        :param rd_ratio: Input channel reduction ratio.
+        """
+        super(SEBlock, self).__init__()
+        self.reduce = nn.Conv2d(in_channels=in_channels,
+                                out_channels=int(in_channels * rd_ratio),
+                                kernel_size=1,
+                                stride=1,
+                                bias=True)
+        self.expand = nn.Conv2d(in_channels=int(in_channels * rd_ratio),
+                                out_channels=in_channels,
+                                kernel_size=1,
+                                stride=1,
+                                bias=True)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """ Apply forward pass. """
+        b, c, h, w = inputs.size()
+        x = F.avg_pool2d(inputs, kernel_size=[h, w])
+        x = self.reduce(x)
+        x = F.relu(x)
+        x = self.expand(x)
+        x = torch.sigmoid(x)
+        x = x.view(-1, c, 1, 1)
+        return inputs * x
+
+
+
+class RepBlock(nn.Module):
+    def __init__(self,
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: int,
+                 stride: int = 1,
+                 padding: int = 0,
+                 dilation: int = 1,
+                 groups: int = 1,
+                 inference_mode: bool = False,
+                 use_se: bool = False,
+                 num_conv_branches: int = 1) -> None:
+        """ Construct a ReparameterizationBasicBlock module.
+
+        :param in_channels: Number of channels in the input.
+        :param out_channels: Number of channels produced by the block.
+        :param kernel_size: Size of the convolution kernel.
+        :param stride: Stride size.
+        :param padding: Zero-padding size.
+        :param dilation: Kernel dilation factor.
+        :param groups: Group number.
+        :param inference_mode: If True, instantiates model in inference mode.
+        :param use_se: Whether to use SE-ReLU activations.
+        :param num_conv_branches: Number of linear conv branches.
+        """
+        super(RepBlock, self).__init__()
+        self.inference_mode = inference_mode
+        self.groups = groups
+        self.stride = stride
+        self.kernel_size = kernel_size
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.num_conv_branches = num_conv_branches
+
+        # Check if SE-ReLU is requested
+        if use_se:
+            self.se = SEBlock(out_channels)
+        else:
+            self.se = nn.Identity()
+        self.activation = nn.ReLU()
+
+        if inference_mode:
+            self.reparam_conv = nn.Conv2d(in_channels=in_channels,
+                                          out_channels=out_channels,
+                                          kernel_size=kernel_size,
+                                          stride=stride,
+                                          padding=padding,
+                                          dilation=dilation,
+                                          groups=groups,
+                                          bias=True)
+        else:
+            # Re-parameterizable skip connection
+            self.rbr_skip = nn.BatchNorm2d(num_features=in_channels) \
+                if out_channels == in_channels and stride == 1 else None
+
+            # Re-parameterizable conv branches
+            rbr_conv = list()
+            for _ in range(self.num_conv_branches):
+                rbr_conv.append(self._conv_bn(kernel_size=kernel_size,
+                                              padding=padding))
+            self.rbr_conv = nn.ModuleList(rbr_conv)
+
+            # Re-parameterizable scale branch
+            self.rbr_scale = None
+            if kernel_size > 1:
+                self.rbr_scale = self._conv_bn(kernel_size=1,
+                                               padding=0)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """ Apply forward pass. """
+        # Inference mode forward pass.
+        if self.inference_mode:
+            return self.activation(self.se(self.reparam_conv(x)))
+
+        # Multi-branched train-time forward pass.
+        # Skip branch output
+        identity_out = 0
+        if self.rbr_skip is not None:
+            identity_out = self.rbr_skip(x)
+
+        # Scale branch output
+        scale_out = 0
+        if self.rbr_scale is not None:
+            scale_out = self.rbr_scale(x)
+
+        # Other branches
+        out = scale_out + identity_out
+        for ix in range(self.num_conv_branches):
+            out += self.rbr_conv[ix](x)
+
+        return self.activation(self.se(out))
+
+    def reparameterize(self):
+        """ Following works like `RepVGG: Making VGG-style ConvNets Great Again` -
+        https://arxiv.org/pdf/2101.03697.pdf. We re-parameterize multi-branched
+        architecture used at training time to obtain a plain CNN-like structure
+        for inference.
+        """
+        if self.inference_mode:
+            return
+        kernel, bias = self._get_kernel_bias()
+        self.reparam_conv = nn.Conv2d(in_channels=self.rbr_conv[0].conv.in_channels,
+                                      out_channels=self.rbr_conv[0].conv.out_channels,
+                                      kernel_size=self.rbr_conv[0].conv.kernel_size,
+                                      stride=self.rbr_conv[0].conv.stride,
+                                      padding=self.rbr_conv[0].conv.padding,
+                                      dilation=self.rbr_conv[0].conv.dilation,
+                                      groups=self.rbr_conv[0].conv.groups,
+                                      bias=True)
+        self.reparam_conv.weight.data = kernel
+        self.reparam_conv.bias.data = bias
+
+        # Delete un-used branches
+        for para in self.parameters():
+            para.detach_()
+        self.__delattr__('rbr_conv')
+        self.__delattr__('rbr_scale')
+        if hasattr(self, 'rbr_skip'):
+            self.__delattr__('rbr_skip')
+
+        self.inference_mode = True
+
+    def _get_kernel_bias(self) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Method to obtain re-parameterized kernel and bias.
+        Reference: https://github.com/DingXiaoH/RepVGG/blob/main/repvgg.py#L83
+
+        :return: Tuple of (kernel, bias) after fusing branches.
+        """
+        # get weights and bias of scale branch
+        kernel_scale = 0
+        bias_scale = 0
+        if self.rbr_scale is not None:
+            kernel_scale, bias_scale = self._fuse_bn_tensor(self.rbr_scale)
+            # Pad scale branch kernel to match conv branch kernel size.
+            pad = self.kernel_size // 2
+            kernel_scale = torch.nn.functional.pad(kernel_scale,
+                                                   [pad, pad, pad, pad])
+
+        # get weights and bias of skip branch
+        kernel_identity = 0
+        bias_identity = 0
+        if self.rbr_skip is not None:
+            kernel_identity, bias_identity = self._fuse_bn_tensor(self.rbr_skip)
+
+        # get weights and bias of conv branches
+        kernel_conv = 0
+        bias_conv = 0
+        for ix in range(self.num_conv_branches):
+            _kernel, _bias = self._fuse_bn_tensor(self.rbr_conv[ix])
+            kernel_conv += _kernel
+            bias_conv += _bias
+
+        kernel_final = kernel_conv + kernel_scale + kernel_identity
+        bias_final = bias_conv + bias_scale + bias_identity
+        return kernel_final, bias_final
+
+    def _fuse_bn_tensor(self, branch) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Method to fuse batchnorm layer with preceeding conv layer.
+        Reference: https://github.com/DingXiaoH/RepVGG/blob/main/repvgg.py#L95
+
+        :param branch:
+        :return: Tuple of (kernel, bias) after fusing batchnorm.
+        """
+        if isinstance(branch, nn.Sequential):
+            kernel = branch.conv.weight
+            running_mean = branch.bn.running_mean
+            running_var = branch.bn.running_var
+            gamma = branch.bn.weight
+            beta = branch.bn.bias
+            eps = branch.bn.eps
+        else:
+            assert isinstance(branch, nn.BatchNorm2d)
+            if not hasattr(self, 'id_tensor'):
+                input_dim = self.in_channels // self.groups
+                kernel_value = torch.zeros((self.in_channels,
+                                            input_dim,
+                                            self.kernel_size,
+                                            self.kernel_size),
+                                           dtype=branch.weight.dtype,
+                                           device=branch.weight.device)
+                for i in range(self.in_channels):
+                    kernel_value[i, i % input_dim,
+                                 self.kernel_size // 2,
+                                 self.kernel_size // 2] = 1
+                self.id_tensor = kernel_value
+            kernel = self.id_tensor
+            running_mean = branch.running_mean
+            running_var = branch.running_var
+            gamma = branch.weight
+            beta = branch.bias
+            eps = branch.eps
+        std = (running_var + eps).sqrt()
+        t = (gamma / std).reshape(-1, 1, 1, 1)
+        return kernel * t, beta - running_mean * gamma / std
+
+    def _conv_bn(self,
+                 kernel_size: int,
+                 padding: int) -> nn.Sequential:
+        """ Helper method to construct conv-batchnorm layers.
+
+        :param kernel_size: Size of the convolution kernel.
+        :param padding: Zero-padding size.
+        :return: Conv-BN module.
+        """
+        mod_list = nn.Sequential()
+        mod_list.add_module('conv', nn.Conv2d(in_channels=self.in_channels,
+                                              out_channels=self.out_channels,
+                                              kernel_size=kernel_size,
+                                              stride=self.stride,
+                                              padding=padding,
+                                              groups=self.groups,
+                                              bias=False))
+        mod_list.add_module('bn', nn.BatchNorm2d(num_features=self.out_channels))
+        return mod_list
+    
+
+class SLBlock(nn.Module):
+    
+    """make subspace learning block"""
+    def __init__(self, inp, oup, stride, expand_ratio, identity_tensor_multiplier=1.0, norm_layer=None, keep_3x3=False, use_se=False, num_conv_branches=1, inference_mode = False):
+        super(SLBlock, self).__init__()
+        self.stride = stride
+        assert stride in [1, 2]
+        self.use_identity = False if identity_tensor_multiplier==1.0 else True
+        self.identity_tensor_channels = int(round(inp*identity_tensor_multiplier))
+        self.use_se = use_se
+        self.num_conv_branches = num_conv_branches
+        self.inference_mode = inference_mode
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        hidden_dim = inp // expand_ratio
+        if hidden_dim < oup /6.:
+            hidden_dim = math.ceil(oup / 6.)
+            hidden_dim = _make_divisible(hidden_dim, 16)
+
+        self.use_res_connect = self.stride == 1 and inp == oup
+
+        layers = []
+        # dw
+        if expand_ratio == 2 or inp==oup:
+            # layers.append(ConvBNReLU(inp, inp, kernel_size=1, stride=1, groups=inp, norm_layer=norm_layer))
+            layers.append(
+                RepBlock(in_channels=inp,
+                    out_channels=inp,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    groups=inp,
+                    inference_mode=self.inference_mode,
+                    use_se=self.use_se,
+                    num_conv_branches=self.num_conv_branches)
+            )
+        if expand_ratio != 1:
+            # pw-linear
+            layers.extend([
+                nn.Conv2d(inp, hidden_dim, kernel_size=1, stride=1, padding=0, groups=1, bias=False),
+                norm_layer(hidden_dim),
+        
+            ])
+
+        layers.extend([
+            # pw
+            # ConvBNReLU(hidden_dim, oup, kernel_size=1, stride=1, groups=1, norm_layer=norm_layer)
+            RepBlock(in_channels=hidden_dim,
+                    out_channels=oup,
+                    kernel_size=1,
+                    stride=1,
+                    padding=0,
+                    groups=1,
+                    inference_mode=self.inference_mode,
+                    use_se=self.use_se,
+                    num_conv_branches=self.num_conv_branches)
+        ])
+        if expand_ratio == 2 or inp==oup or stride==2:
+            layers.extend([
+            # dw-linear
+            nn.Conv2d(oup, oup, kernel_size=3, stride=stride, groups=oup, padding=1, bias=False),
+            norm_layer(oup),
+            # dw
+            # ConvBNReLU(oup, oup, kernel_size=1, stride=1, groups=oup, norm_layer=norm_layer)
+        ])
+        self.conv = nn.Sequential(*layers)
+
+    def forward(self, x):
+        out = self.conv(x)
+        if self.use_res_connect:
+            if self.use_identity:
+                identity_tensor= x[:,:self.identity_tensor_channels,:,:] + out[:,:self.identity_tensor_channels,:,:]
+                out = torch.cat([identity_tensor, out[:,self.identity_tensor_channels:,:,:]], dim=1)
+                # out[:,:self.identity_tensor_channels,:,:] += x[:,:self.identity_tensor_channels,:,:]
+            else:
+                out = x + out
+            return out
+        else:
+            return out
+
+
+
+
+class Root_SLModel(nn.Module):
+    def __init__(self,
+                input_nc,
+                input_width,
+                input_height,
+                 num_classes=10,
+                 stide = 1,
+                 width_mult=1.0,
+                 identity_tensor_multiplier=1.0,
+                 sand_glass_setting=None,
+                 round_nearest=8,
+                 expansion_ratio=6,
+                 block=None,
+                 use_se = False,
+                 norm_layer=None,
+                 **kwargs):
+        """
+        Args:
+            num_classes (int): Number of classes
+            width_mult (float): Width multiplier - adjusts number of channels in each layer by this amount
+            identity_tensor_multiplier(float): Identity tensor multiplier - reduce the number of element-wise additions in each block
+            sand_glass_setting: Network structure
+            round_nearest (int): Round the number of channels in each layer to be a multiple of this number
+            Set to 1 to turn off rounding
+            block: Module specifying inverted residual building block for mobilenet
+            norm_layer: Module specifying the normalization layer to use
+        """
+        super(Root_SLModel, self).__init__()
+
+        if block is None:
+            block = SLBlock
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        # input_channel = 32
+        input_channel = input_nc
+        last_channel = 1280
+
+        # building first layer
+        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
+        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+
+        if sand_glass_setting is None:
+            sand_glass_setting = [
+                # t, c,  b, s
+                [2, 96,  1, 2],
+                [expansion_ratio, 144, 1, 1],
+                [expansion_ratio, 192, 3, 2],
+                [expansion_ratio, 288, 3, 2],
+                [expansion_ratio, 384, 4, 1],
+                [expansion_ratio, 576, 4, 2],
+                [expansion_ratio, 960, 2, 1],
+                [expansion_ratio, self.last_channel / width_mult, 1, 1],
+            ]
+
+        # only check the first element, assuming user knows t,c,n,s are required
+        if len(sand_glass_setting) == 0 or len(sand_glass_setting[0]) != 4:
+            raise ValueError("sand_glass_setting should be non-empty "
+                             "or a 4-element list, got {}".format(sand_glass_setting))
+
+        # building sand glass blocks
+        for t, c, b, s in sand_glass_setting:
+            output_channel = _make_divisible(c * width_mult, round_nearest)
+            for i in range(b):
+                stride = s if i == 0 else 1
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, 
+                    identity_tensor_multiplier=identity_tensor_multiplier, norm_layer=norm_layer, keep_3x3=(b==1 and s==1 and i==0), use_se = use_se))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        # self.features = features
+        self.features = nn.Sequential(*features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the edger to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(2, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
+
+class Root_SLModelTiny(nn.Module):
+    def __init__(self,
+                input_nc,
+                input_width,
+                input_height,
+                 num_classes=10,
+                 stide = 1,
+                 width_mult=1.0,
+                 identity_tensor_multiplier=1.0,
+                 sand_glass_setting=None,
+                 round_nearest=8,
+                 expansion_ratio=6,
+                 block=None,
+                 use_se = False,
+                 norm_layer=None,
+                 **kwargs):
+        """
+        Args:
+            num_classes (int): Number of classes
+            width_mult (float): Width multiplier - adjusts number of channels in each layer by this amount
+            identity_tensor_multiplier(float): Identity tensor multiplier - reduce the number of element-wise additions in each block
+            sand_glass_setting: Network structure
+            round_nearest (int): Round the number of channels in each layer to be a multiple of this number
+            Set to 1 to turn off rounding
+            block: Module specifying inverted residual building block for mobilenet
+            norm_layer: Module specifying the normalization layer to use
+        """
+        super(Root_SLModelTiny, self).__init__()
+
+        if block is None:
+            block = SLBlock
+
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
+        # input_channel = 32
+        input_channel = input_nc
+        last_channel = 1280
+
+        # building first layer
+        input_channel = _make_divisible(input_channel * width_mult, round_nearest)
+        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        features = [ConvBNReLU(3, input_channel, stride=2, norm_layer=norm_layer)]
+
+        if sand_glass_setting is None:
+            sand_glass_setting = [
+                # t, c,  b, s
+                [2, 96,  1, 1],
+                [expansion_ratio, 144, 1, 1],
+                [expansion_ratio, 192, 3, 2],
+                [expansion_ratio, 288, 3, 2],
+                [expansion_ratio, 384, 4, 1],
+            ]
+
+        # only check the first element, assuming user knows t,c,n,s are required
+        if len(sand_glass_setting) == 0 or len(sand_glass_setting[0]) != 4:
+            raise ValueError("sand_glass_setting should be non-empty "
+                             "or a 4-element list, got {}".format(sand_glass_setting))
+
+        # building sand glass blocks
+        for t, c, b, s in sand_glass_setting:
+            output_channel = _make_divisible(c * width_mult, round_nearest)
+            for i in range(b):
+                stride = s if i == 0 else 1
+                features.append(block(input_channel, output_channel, stride, expand_ratio=t, 
+                    identity_tensor_multiplier=identity_tensor_multiplier, norm_layer=norm_layer, keep_3x3=(b==1 and s==1 and i==0), use_se = use_se))
+                input_channel = output_channel
+
+        # make it nn.Sequential
+        # self.features = features
+        self.features = nn.Sequential(*features)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+        
+        # weight initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+                nn.init.ones_(m.weight)
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.Linear):
+                nn.init.normal_(m.weight, 0, 0.01)
+                nn.init.zeros_(m.bias)
+
+    def forward(self, x):
+        x = self.features(x)
+        return x
+
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the edger to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(2, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
+
+class Edge_SL(nn.Module):
+    # modified from JustConv
+    """ 1 convolution """
+    def __init__(self, input_nc, input_width, input_height, 
+                 ngf=6, kernel_size=3, stride=1, **kwargs):
+        super(Edge_SL, self).__init__()
+
+        # print("check just conv:", stride)
+        if max(input_width, input_height) < kernel_size:
+            warnings.warn('Router kernel too large, shrink it')
+            kernel_size = max(input_width, input_height)
+
+        # self.conv = nn.Conv2d(input_nc, ngf, kernel_size, stride=stride, padding=kernel_size//2)
+        self.conv = RepBlock(in_channels=input_nc,
+                    out_channels=ngf,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    padding=(kernel_size - 1) // 2,
+                    groups=1,
+                    inference_mode=False, # set true after reparam
+                    use_se=self.use_se,
+                    num_conv_branches=1)
+        self.outputshape = self.get_outputshape(input_nc, input_width, input_height)
+
+    def get_outputshape(self, input_nc, input_width, input_height ):
+        """ Run a single forward pass through the transformer to get the 
+        output size
+        """
+        dtype = torch.FloatTensor
+        x = Variable(
+            torch.randn(1, input_nc, input_width, input_height).type(dtype),
+            requires_grad=False)
+        return self.forward(x).size()
+
+    def forward(self, x):
+        return self.conv(x)
+    
 
 ## vision transformer block
 
